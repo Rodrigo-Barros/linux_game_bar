@@ -1,0 +1,12 @@
+[
+  {
+    "delay": 500,
+    "keybing": ["L1", "R1"],
+    "action": "Window::Main"
+  },
+  {
+    "delay": 1000,
+    "keybinding": ["L1", "Circle"],
+    "action": "ShellScript('~/local/bin/record_obs.sh')"
+  }
+]

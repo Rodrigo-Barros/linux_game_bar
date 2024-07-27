@@ -1,4 +1,4 @@
-
+#! /usr/bin/valac -S --pkg libpulse
 public class Pulse : GLib.Object {
     protected PulseAudio.MainLoop mainloop;
     protected PulseAudio.Context context;

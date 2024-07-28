@@ -1,11 +1,15 @@
 public class App {
-    static void main (string[] args) {
+    private void run (string[] args) {
         var pulse = new Pulse ();
+        var joystick = new Joystick ();
+        while (true) {
+            joystick.readEvents ();
+        }
+    }
 
-        // return an array containing all applications/windows using pulse audio
-        var applications = pulse.get_applications ();
-        pulse.volume_up (applications[1].id, 10);
-        pulse.get_default_sink ();
+    static void main (string[] args) {
+        App app = new App ();
+        app.run (args);
 
         // Pulse.Application[] apps = pulse.get_applications ();
         // print ("aqui:%s \n", pulse.get_default_sink ());

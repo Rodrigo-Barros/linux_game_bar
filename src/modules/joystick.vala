@@ -1,5 +1,90 @@
 #! /usr/bin/valac -S --pkg sdl2
 
+public class Controller {
+    private Button[] buttons = {};
+
+    private struct Button {
+        string button_name;
+        uint32 button_id;
+    }
+    public void getButtons () {
+        for (int i = 0; i < this.buttons.length; i++) {
+            print ("Button Name: %s, Button id:%d\n", this.buttons[i].button_name, (int) this.buttons[i].button_id);
+        }
+    }
+
+    public void addButton (string button_name, uint32 button_id) {
+        Button button = Button ();
+        button.button_name = button_name;
+        button.button_id = button_id;
+        this.buttons += button;
+    }
+
+    public string getButtonName (uint32 button_id) {
+        string button_name = "";
+        for (int i = 0; i < this.buttons.length; i++) {
+            Button button = this.buttons[i];
+            if (button.button_id == button_id) {
+                button_name = button.button_name;
+            }
+        }
+        return button_name;
+    }
+}
+
+public class PS4Controller : Controller {
+    // private Button[] buttons = {};
+
+    // private struct Button {
+    // string button_name;
+    // uint32 button_id;
+    // }
+    // public void addButton (string button_name, uint32 button_id) {
+    // Button button = Button ();
+    // button.button_name = button_name;
+    // button.button_id = button_id;
+    // this.buttons += button;
+    // }
+
+    // public string getButtonName (uint32 button_id) {
+    // string button_name = "";
+    // for (int i = 0; i < this.buttons.length; i++) {
+    // Button button = this.buttons[i];
+    // if (button.button_id == button_id) {
+    // button_name = button.button_name;
+    // }
+    // }
+    // return button_name;
+    // }
+
+    public PS4Controller () {
+        this.addButton ("CROSS", 0);
+        this.addButton ("CIRCLE", 1);
+        this.addButton ("SQUARE", 2);
+        this.addButton ("TRIANGLE", 3);
+        this.addButton ("SHARE", 4);
+        this.addButton ("PLAYSTATION", 5);
+        this.addButton ("OPTIONS", 6);
+        this.addButton ("LEFT_STICK", 7);
+        this.addButton ("RIGHT_STICK", 8);
+        this.addButton ("L1", 9);
+        this.addButton ("R1", 10);
+        this.addButton ("ARROW_UP", 11);
+        this.addButton ("ARROW_DOWN", 12);
+        this.addButton ("ARROW_LEFT", 13);
+        this.addButton ("ARROW_RIGHT", 14);
+        this.addButton ("TOCHPAD", 15);
+
+        this.getButtons ();
+    }
+
+    // public void getButtons () {
+    // for (int i = 0; i < this.buttons.length; i++) {
+    // print ("Button Name: %s, Button id:%d\n", this.buttons[i].button_name, (int) this.buttons[i].button_id);
+    // }
+    // }
+}
+
 public class Joystick {
     public events[] keybindings = {};
 
@@ -10,10 +95,13 @@ public class Joystick {
 
     public SDL.Input.Joystick[] joysticks = {};
 
+    public PS4Controller controller;
+
     public Joystick () {
         // SDL.Input.Joystick[] _joysticks = {};
         SDL.init (SDL.InitFlag.EVERYTHING);
         int joysticks = SDL.Input.Joystick.count ();
+        this.controller = new PS4Controller ();
         if (joysticks > 0) {
             for (int i = 0; i < joysticks; i++) {
                 this.joysticks[i] = new SDL.Input.Joystick (i);
@@ -22,7 +110,21 @@ public class Joystick {
     }
 
     public void process_keybinds (SDL.Event event) {
-        string bindings = "../keybinds.json";
+        string button_state = event.jbutton.state == 1 ? "pressed" : "release";
+        uint32 button_id = event.button.which > 255 ? event.button.which - 256 : event.button.which;
+
+        if (event.type == SDL.EventType.JOYBUTTONUP) {
+            print ("Button: %s, State: %s\n", this.controller.getButtonName (button_id), button_state);
+        }
+
+        if (event.type == SDL.EventType.JOYBUTTONDOWN) {
+            print ("Button: %s, State: %s\n", this.controller.getButtonName (button_id), button_state);
+        }
+
+        if (event.type == SDL.EventType.QUIT) {
+            print ("Exiting....\n");
+            Posix.exit (0);
+        }
     }
 
     public void readEvents () {

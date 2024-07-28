@@ -1,9 +1,10 @@
 public class App {
     static void main (string[] args) {
         var pulse = new Pulse ();
-        pulse.init ();
 
-        pulse.volume_down (609, 10);
+        // return an array containing all applications/windows using pulse audio
+        var applications = pulse.get_applications ();
+        pulse.volume_up (applications[1].id, 10);
         pulse.get_default_sink ();
 
         // Pulse.Application[] apps = pulse.get_applications ();

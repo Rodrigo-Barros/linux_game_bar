@@ -3,7 +3,6 @@ public class Pulse : GLib.Object {
     protected PulseAudio.MainLoop mainloop;
     protected PulseAudio.Context context;
     protected PulseAudio.Context.Flags flags = PulseAudio.Context.Flags.NOFAIL;
-    protected Application[] applications = {};
 
     public struct Application {
         uint32 id;
@@ -16,19 +15,9 @@ public class Pulse : GLib.Object {
 
     delegate void resolveContext (PulseAudio.Context c);
 
-    public uint32 _volume;
-    public uint32 volume {
-        get { return _volume; }
-        set { _volume = value > PulseAudio.Volume.NORM ? PulseAudio.Volume.NORM : value; }
-    }
-
-    public void init () {
-        this.mainloop = new PulseAudio.MainLoop ();
-        this.context = new PulseAudio.Context (this.mainloop.get_api (), null);
-        this.applications = this.get_applications ();
-    }
-
     private void exec (resolveContext callback) {
+        this.mainloop = new PulseAudio.MainLoop ();
+        this.context = new PulseAudio.Context (this.mainloop.get_api (), "Liux Game Bar");
         this.context.set_state_callback ((c) => {
             PulseAudio.Context.State state = c.get_state ();
 
@@ -54,6 +43,8 @@ public class Pulse : GLib.Object {
             }
 
             if (c.get_state () == PulseAudio.Context.State.TERMINATED) {
+                c.disconnect ();
+                this.mainloop.quit (0);
             }
         });
         this.context.connect (null, this.flags);
@@ -61,7 +52,7 @@ public class Pulse : GLib.Object {
         this.mainloop.run ();
     }
 
-    private Application[] get_applications () {
+    public Application[] get_applications () {
         Application[] applications = {};
         this.exec ((c) => {
             c.get_sink_input_info_list ((c, sink, eol) => {
@@ -69,13 +60,13 @@ public class Pulse : GLib.Object {
                     // PulseAudio.CVolume volume = sink.volume;
                     // string app = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_NAME);
                     // string title = sink.name;
-                    // stdout.printf ("App: %s,title: %s, volume:%s \n", app, title, volume.to_string ());
                     Application application = Application ();
-                    application.name = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_NAME);;
+                    application.name = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_NAME);
                     application.title = sink.name;
                     application.id = sink.index;
                     application.volume = sink.volume;
                     applications += application;
+                    stdout.printf ("App: %s,title: %s, volume:%s \n", application.name, application.title, application.volume.to_string ());
                 }
                 if (eol == 1) {
                     c.disconnect ();
@@ -102,38 +93,85 @@ public class Pulse : GLib.Object {
         return this.default_sink;
     }
 
-    public bool volume_down (int id, int decrease) {
-        for (int i = 0; i < this.applications.length; i++) {
-            string application_name = this.applications[i].name;
-            int application_id = (int) this.applications[i].id;
-            PulseAudio.CVolume volume = this.applications[i].volume;
+    public bool volume_down (uint32 id, int decrease) {
+        Application[] applications = this.get_applications ();
+        for (int i = 0; i < applications.length; i++) {
+            string application_name = applications[i].name;
+            int application_id = (int) applications[i].id;
+            PulseAudio.CVolume volume = applications[i].volume;
 
             int volume_min = 0;
             uint32 volume_anterior = volume.avg ();
-            int percentual = (int) ((volume_anterior / (float) PulseAudio.Volume.NORM) * 100);
-            uint32 volume_atual = ((int) volume_anterior - decrease);
+            float valor_diminuicao = (((float) PulseAudio.Volume.NORM * decrease)) / 100;
+            float percentual_diminuicao = (100 * valor_diminuicao) / (float) PulseAudio.Volume.NORM;
+            uint32 volume_atual = ((int) volume_anterior - (int) valor_diminuicao);
 
-            if (volume_atual < volume_min) {
-                stdout.printf ("Não é possível abaixar o volume abaixo de 0");
-                return false;
+
+            print ("valor dimiuicao: %f\n", valor_diminuicao);
+            print ("percentual dimiuicao: %f\n", percentual_diminuicao);
+
+            if ((int) volume_atual <= volume_min) {
+                volume_atual = volume_min;
             }
 
 
             if (application_id == id) {
-                // this.init
-
-                print ("exit code: %d\n ", this.mainloop.get_retval ());
                 stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
                 stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
+
+                this.exec ((c) => {
+                    volume.set (volume.channels, volume_atual);
+                    c.set_sink_input_volume (application_id, volume, (c) => {
+                        print ("Volume definido para %d\n", (int) volume_atual);
+                        c.disconnect ();
+                    });
+                });
                 return true;
             }
         }
 
-        stdout.printf ("Não foi possível achar a aplicação com id %d\n", id);
+        stdout.printf ("Não foi possível achar a aplicação com id %d\n", (int) id);
         return false;
     }
 
-    public bool volume_up (string application, int increase) {
+    public bool volume_up (uint32 id, uint8 increase) {
+        Application[] applications = this.get_applications ();
+        for (int i = 0; i < applications.length; i++) {
+            string application_name = applications[i].name;
+            int application_id = (int) applications[i].id;
+            PulseAudio.CVolume volume = applications[i].volume;
+
+            uint32 volume_max = PulseAudio.Volume.NORM;
+            uint32 volume_anterior = volume.avg ();
+            float valor_aumento = (((float) PulseAudio.Volume.NORM * increase)) / 100;
+            float percentual_aumento = (100 * valor_aumento) / (float) PulseAudio.Volume.NORM;
+            uint32 volume_atual = ((int) volume_anterior + (int) valor_aumento);
+
+
+            print ("valor aumento: %f\n", valor_aumento);
+            print ("percentual diminuicao: %f\n", percentual_aumento);
+
+            if ((int) volume_atual >= volume_max) {
+                volume_atual = volume_max;
+            }
+
+
+            if (application_id == id) {
+                stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
+                stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
+
+                this.exec ((c) => {
+                    volume.set (volume.channels, volume_atual);
+                    c.set_sink_input_volume (application_id, volume, (c) => {
+                        print ("Volume definido para %d\n", (int) volume_atual);
+                        c.disconnect ();
+                    });
+                });
+                return true;
+            }
+        }
+
+        stdout.printf ("Não foi possível achar a aplicação com id %d\n", (int) id);
         return false;
     }
 }

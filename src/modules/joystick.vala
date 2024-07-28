@@ -30,32 +30,23 @@ public class Controller {
         }
         return button_name;
     }
+
+    public static Controller init (string controller_name) {
+        Controller controller_profile;
+        switch (controller_name) {
+        case "PS4 Controller":
+            controller_profile = new PS4Controller ();
+            break;
+        default:
+            controller_profile = new PS4Controller ();
+            break;
+        }
+
+        return new PS4Controller ();
+    }
 }
 
 public class PS4Controller : Controller {
-    // private Button[] buttons = {};
-
-    // private struct Button {
-    // string button_name;
-    // uint32 button_id;
-    // }
-    // public void addButton (string button_name, uint32 button_id) {
-    // Button button = Button ();
-    // button.button_name = button_name;
-    // button.button_id = button_id;
-    // this.buttons += button;
-    // }
-
-    // public string getButtonName (uint32 button_id) {
-    // string button_name = "";
-    // for (int i = 0; i < this.buttons.length; i++) {
-    // Button button = this.buttons[i];
-    // if (button.button_id == button_id) {
-    // button_name = button.button_name;
-    // }
-    // }
-    // return button_name;
-    // }
 
     public PS4Controller () {
         this.addButton ("CROSS", 0);
@@ -77,12 +68,6 @@ public class PS4Controller : Controller {
 
         this.getButtons ();
     }
-
-    // public void getButtons () {
-    // for (int i = 0; i < this.buttons.length; i++) {
-    // print ("Button Name: %s, Button id:%d\n", this.buttons[i].button_name, (int) this.buttons[i].button_id);
-    // }
-    // }
 }
 
 public class Joystick {
@@ -95,18 +80,61 @@ public class Joystick {
 
     public SDL.Input.Joystick[] joysticks = {};
 
-    public PS4Controller controller;
+    public Controller controller;
 
     public Joystick () {
         // SDL.Input.Joystick[] _joysticks = {};
         SDL.init (SDL.InitFlag.EVERYTHING);
         int joysticks = SDL.Input.Joystick.count ();
-        this.controller = new PS4Controller ();
         if (joysticks > 0) {
             for (int i = 0; i < joysticks; i++) {
                 this.joysticks[i] = new SDL.Input.Joystick (i);
+                unowned SDL.Input.Joystick joystick = this.joysticks[i];
+                string joystick_name = joystick.get_name ();
+                string power_level = this.translate_joystick_level (joystick.get_current_powerlevel ());
+                this.controller = Controller.init (joystick_name);
+
+                print ("Joystick %s\n", joystick_name);
+                print ("Joystick Power: %s\n", power_level);
+                // print ("Joystick GUID: %s\n", );
             }
         }
+    }
+
+    public string translate_joystick_level (SDL.Input.JoystickPowerLevel power_level) {
+        string power_level_status = "NOT FOUND";
+
+        switch (power_level) {
+        case SDL.Input.JoystickPowerLevel.EMPTY:
+            power_level_status = "EMPTY";
+            break;
+
+        case SDL.Input.JoystickPowerLevel.FULL:
+            power_level_status = "FULL";
+            break;
+
+        case SDL.Input.JoystickPowerLevel.LOW:
+            power_level_status = "LOW";
+            break;
+
+        case SDL.Input.JoystickPowerLevel.MAX:
+            power_level_status = "MAX";
+            break;
+
+        case SDL.Input.JoystickPowerLevel.MEDIUM:
+            power_level_status = "MEDIUM";
+            break;
+
+        case SDL.Input.JoystickPowerLevel.UNKNOWN:
+            power_level_status = "UNKNOW";
+            break;
+
+        case SDL.Input.JoystickPowerLevel.WIRED:
+            power_level_status = "WIRED";
+            break;
+        }
+
+        return power_level_status;
     }
 
     public void process_keybinds (SDL.Event event) {

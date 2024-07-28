@@ -1,6 +1,13 @@
 #! /usr/bin/valac -S --pkg sdl2
 
 public class Joystick {
+    public events[] keybindings = {};
+
+    public struct events {
+        string name;
+        int index;
+    }
+
     public SDL.Input.Joystick[] joysticks = {};
 
     public Joystick () {
@@ -14,6 +21,14 @@ public class Joystick {
         }
     }
 
+    public void process_keybinds (SDL.Event event) {
+        string bindings = "../keybinds.json";
+    }
+
     public void readEvents () {
+        SDL.Event event;
+        while (SDL.Event.poll (out event) == 1) {
+            this.process_keybinds (event);
+        }
     }
 }

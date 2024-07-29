@@ -3,14 +3,19 @@
 public class Controller {
     private Button[] buttons = {};
 
-    private struct Button {
+    public struct Button {
         string button_name;
         uint32 button_id;
     }
-    public void getButtons () {
-        for (int i = 0; i < this.buttons.length; i++) {
-            print ("Button Name: %s, Button id:%d\n", this.buttons[i].button_name, (int) this.buttons[i].button_id);
+    public Button[] getButtons (bool debug = true) {
+
+        if (debug) {
+            for (int i = 0; i < this.buttons.length; i++) {
+                print ("Button Name: %s, Button id:%d\n", this.buttons[i].button_name, (int) this.buttons[i].button_id);
+            }
         }
+
+        return this.buttons;
     }
 
     public void addButton (string button_name, uint32 button_id) {
@@ -71,16 +76,56 @@ public class PS4Controller : Controller {
 }
 
 public class Joystick {
-    public events[] keybindings = {};
 
-    public struct events {
-        string name;
-        int index;
+    const uint16 MAX_EXPIRATION = 5000;
+
+    public struct event {
+        string button_name;
+        uint32 button_id;
+        int timestamp;
+        string type;
     }
+
+    public event[] events = new event[10];
 
     public SDL.Input.Joystick[] joysticks = {};
 
     public Controller controller;
+
+    public bool addEvent (event button_event) {
+        bool event_add = false;
+        uint32 current_event_id = -1;
+
+        // valida se o botão deve ser inserido no array de eventos
+        for (int i = 0; i < this.events.length; i++) {
+
+            // if null we are in first run
+            if (this.events[i].type == null) {
+                event_add = true;
+                current_event_id = i;
+                break;
+            }
+        }
+
+        if (current_event_id == -1) {
+            event_add = false;
+            stdout.printf ("Todos os slots foram ocupados\n");
+        }
+
+        if (event_add) {
+            stdout.printf ("O Botão foi adicionado a lista de eventos\n");
+            if(current_event_id != -1)
+            {
+                this.events[current_event_id] = button_event;
+            }
+        }
+
+        return event_add;
+    }
+
+    public event[] getEvents () {
+        return this.events;
+    }
 
     public Joystick () {
         // SDL.Input.Joystick[] _joysticks = {};
@@ -96,7 +141,7 @@ public class Joystick {
 
                 print ("Joystick %s\n", joystick_name);
                 print ("Joystick Power: %s\n", power_level);
-                // print ("Joystick GUID: %s\n", );
+                print ("Joystick GUID: %s\n", SDL.Input.Joystick.get_guid_string (joystick.get_guid ()));
             }
         }
     }
@@ -105,7 +150,7 @@ public class Joystick {
         string power_level_status = "NOT FOUND";
 
         switch (power_level) {
-        case SDL.Input.JoystickPowerLevel.EMPTY:
+        case SDL.Input.JoystickPowerLevel.EMPTY :
             power_level_status = "EMPTY";
             break;
 
@@ -141,12 +186,26 @@ public class Joystick {
         string button_state = event.jbutton.state == 1 ? "pressed" : "release";
         uint32 button_id = event.button.which > 255 ? event.button.which - 256 : event.button.which;
 
-        if (event.type == SDL.EventType.JOYBUTTONUP) {
-            print ("Button: %s, State: %s\n", this.controller.getButtonName (button_id), button_state);
-        }
+        // if (event.type == SDL.EventType.JOYBUTTONUP) {
+        // print ("Button: %s, State: %s\n", this.controller.getButtonName (button_id), button_state);
+        // }
 
         if (event.type == SDL.EventType.JOYBUTTONDOWN) {
-            print ("Button: %s, State: %s\n", this.controller.getButtonName (button_id), button_state);
+            Joystick.event e = Joystick.event ();
+            string timestamp = new GLib.DateTime.now ().format ("%s");
+            string button_name = this.controller.getButtonName (button_id);
+            e.button_name = button_name;
+            e.button_id = button_id;
+            e.type = button_state;
+            e.timestamp = int.parse (timestamp);
+
+            this.addEvent (e);
+
+            if (this.controller.getButtonName (button_id) == "CROSS") {
+                for (int i = 0; i < this.events.length; i++) {
+                    stdout.printf ("BTN NAME: %s\n", this.events[i].button_name);
+                }
+            }
         }
 
         if (event.type == SDL.EventType.QUIT) {

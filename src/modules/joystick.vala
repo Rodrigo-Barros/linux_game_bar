@@ -1,4 +1,6 @@
-#! /usr/bin/valac -S --pkg sdl2
+#! /usr/bin/valac -S --pkg sdl2 --pkg gee-0.8
+
+using Gee;
 
 public class Controller {
     private Button[] buttons = {};
@@ -82,45 +84,63 @@ public class Joystick {
     public struct event {
         string button_name;
         uint32 button_id;
-        int timestamp;
+        double timestamp;
         string type;
     }
 
-    public event[] events = new event[10];
+    public event[] events = new event[3];
 
     public SDL.Input.Joystick[] joysticks = {};
 
     public Controller controller;
 
     public bool addEvent (event button_event) {
-        bool event_add = false;
         uint32 current_event_id = -1;
 
-        // valida se o botão deve ser inserido no array de eventos
         for (int i = 0; i < this.events.length; i++) {
-
-            // if null we are in first run
-            if (this.events[i].type == null) {
-                event_add = true;
+            if (this.events[i].button_name == null) {
                 current_event_id = i;
                 break;
             }
         }
 
         if (current_event_id == -1) {
-            event_add = false;
-            stdout.printf ("Todos os slots foram ocupados\n");
-        }
-
-        if (event_add) {
-            stdout.printf ("O Botão foi adicionado a lista de eventos\n");
-            if(current_event_id != -1)
-            {
-                this.events[current_event_id] = button_event;
+            print ("Todos os slots foram Ocupados\n");
+            current_event_id = 0;
+            for (int i = this.events.length; i > 1; i--) {
+                this.events[i - 1] = this.events[i - 2];
             }
         }
 
-        return event_add;
+        if (current_event_id != -1) {
+            this.events[current_event_id] = button_event;
+
+            event[] eventsOrdered = this.getEventsOrdered ();
+
+            // combination.split (" ");
+            for (int i = 0; i < eventsOrdered.length; i++) {
+                var item = eventsOrdered[i];
+                print ("[%d] Button: %s Timestamp:%f\n", i, item.button_name, item.timestamp);
+            }
+            string pressed_buttons = "";
+            string combination = "L1 R1";
+
+            for (int i = combination.split (" ").length - 1; i >= 0; i-- ) {
+                if (eventsOrdered[i].timestamp > 0) {
+                    pressed_buttons += eventsOrdered[i].button_name + " ";
+                }
+            }
+
+            pressed_buttons = pressed_buttons.strip ();
+
+            if (combination == pressed_buttons) {
+                print ("Match found\n");
+            }
+        }
+
+
+
+        return true;
     }
 
     public event[] getEvents () {
@@ -150,7 +170,7 @@ public class Joystick {
         string power_level_status = "NOT FOUND";
 
         switch (power_level) {
-        case SDL.Input.JoystickPowerLevel.EMPTY :
+        case SDL.Input.JoystickPowerLevel.EMPTY:
             power_level_status = "EMPTY";
             break;
 
@@ -182,31 +202,23 @@ public class Joystick {
         return power_level_status;
     }
 
-    public void process_keybinds (SDL.Event event) {
+    public void wait_event (SDL.Event event) {
         string button_state = event.jbutton.state == 1 ? "pressed" : "release";
         uint32 button_id = event.button.which > 255 ? event.button.which - 256 : event.button.which;
 
-        // if (event.type == SDL.EventType.JOYBUTTONUP) {
-        // print ("Button: %s, State: %s\n", this.controller.getButtonName (button_id), button_state);
-        // }
-
         if (event.type == SDL.EventType.JOYBUTTONDOWN) {
-            Joystick.event e = Joystick.event ();
-            string timestamp = new GLib.DateTime.now ().format ("%s");
+            Joystick.event joystickEvent = Joystick.event ();
+            string timestamp = new GLib.DateTime.now ().format ("%s.%f");
             string button_name = this.controller.getButtonName (button_id);
-            e.button_name = button_name;
-            e.button_id = button_id;
-            e.type = button_state;
-            e.timestamp = int.parse (timestamp);
+            joystickEvent.button_name = button_name;
+            joystickEvent.button_id = button_id;
+            joystickEvent.type = button_state;
+            joystickEvent.timestamp = double.parse (timestamp);
 
-            this.addEvent (e);
-
-            if (this.controller.getButtonName (button_id) == "CROSS") {
-                for (int i = 0; i < this.events.length; i++) {
-                    stdout.printf ("BTN NAME: %s\n", this.events[i].button_name);
-                }
-            }
+            this.addEvent (joystickEvent);
+            this.process_buttons ();
         }
+
 
         if (event.type == SDL.EventType.QUIT) {
             print ("Exiting....\n");
@@ -214,10 +226,50 @@ public class Joystick {
         }
     }
 
+    public void process_buttons () {
+        event[] eventsOrdered = this.getEventsOrdered ();
+        string pressed_buttons = "";
+        string combination = "L1 R1";
+
+        for (int i = combination.split (" ").length - 1; i >= 0; i-- ) {
+            if (eventsOrdered[i].timestamp > 0) {
+                pressed_buttons += eventsOrdered[i].button_name + " ";
+            }
+        }
+
+        pressed_buttons = pressed_buttons.strip ();
+
+        if (combination == pressed_buttons) {
+            print ("Match found\n");
+        }
+    }
+
     public void readEvents () {
         SDL.Event event;
         while (SDL.Event.poll (out event) == 1) {
-            this.process_keybinds (event);
+            this.wait_event (event);
         }
+    }
+
+    public event[] getEventsOrdered () {
+        bool swapped = true;
+        int j = 0;
+        event tmp;
+        event[] ordered = this.events;
+
+        while (swapped) {
+            swapped = false;
+            j++;
+            for (int i = 0; i < ordered.length - j; i++) {
+                if (ordered[i].timestamp < ordered[i + 1].timestamp) {
+                    tmp = ordered[i];
+                    ordered[i] = ordered[i + 1];
+                    ordered[i + 1] = tmp;
+                    swapped = true;
+                }
+            }
+        }
+
+        return ordered;
     }
 }

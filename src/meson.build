@@ -5,6 +5,7 @@ dependencies = [
     dependency('gobject-2.0'),
     dependency('libpulse'),
     dependency('libpulse-mainloop-glib'),
+    dependency('gee-0.8'),
     dependency('sdl2')
 ]
 

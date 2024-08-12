@@ -105,7 +105,7 @@ public class Joystick {
         }
 
         if (current_event_id == -1) {
-            print ("Todos os slots foram Ocupados\n");
+            // print ("Todos os slots foram Ocupados\n");
             current_event_id = 0;
             for (int i = this.events.length; i > 1; i--) {
                 this.events[i - 1] = this.events[i - 2];
@@ -120,7 +120,7 @@ public class Joystick {
             // combination.split (" ");
             for (int i = 0; i < eventsOrdered.length; i++) {
                 var item = eventsOrdered[i];
-                print ("[%d] Button: %s Timestamp:%f\n", i, item.button_name, item.timestamp);
+                // print ("[%d] Button: %s Timestamp:%f\n", i, item.button_name, item.timestamp);
             }
             string pressed_buttons = "";
             string combination = "L1 R1";
@@ -132,10 +132,6 @@ public class Joystick {
             }
 
             pressed_buttons = pressed_buttons.strip ();
-
-            if (combination == pressed_buttons) {
-                print ("Match found\n");
-            }
         }
 
 
@@ -229,18 +225,31 @@ public class Joystick {
     public void process_buttons () {
         event[] eventsOrdered = this.getEventsOrdered ();
         string pressed_buttons = "";
+        event[] matchedEvents = new event[0];
         string combination = "L1 R1";
+        double maximum_delay = 1.00;
+        bool aceptable_delay = false;
 
         for (int i = combination.split (" ").length - 1; i >= 0; i-- ) {
             if (eventsOrdered[i].timestamp > 0) {
+                matchedEvents += eventsOrdered[i];
                 pressed_buttons += eventsOrdered[i].button_name + " ";
             }
         }
 
-        pressed_buttons = pressed_buttons.strip ();
-
-        if (combination == pressed_buttons) {
-            print ("Match found\n");
+        if (matchedEvents.length > 1) {
+            double event_start = matchedEvents[0].timestamp;
+            double event_end = matchedEvents[matchedEvents.length - 1].timestamp;
+            double event_diff = event_end - event_start;
+            aceptable_delay = event_diff < maximum_delay;
+            print ("Event diff %f\n", event_diff);
+            print ("Maximun delay %f\n", maximum_delay);
+            print ("Aceptable Delay %s\n", (aceptable_delay) ? "true" : "false");
+            aceptable_delay = matchedEvents[matchedEvents.length].timestamp - matchedEvents[0].timestamp < maximum_delay;
+            pressed_buttons = pressed_buttons.strip ();
+            if (combination == pressed_buttons && aceptable_delay) {
+                print ("Match found\n");
+            }
         }
     }
 

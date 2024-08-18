@@ -1,5 +1,3 @@
-#! /usr/bin/valac -S --pkg sdl2 --pkg gee-0.8
-
 using Gee;
 
 public class Controller {
@@ -244,8 +242,7 @@ public class Joystick {
             aceptable_delay = event_diff < maximum_delay;
             print ("Event diff %f\n", event_diff);
             print ("Maximun delay %f\n", maximum_delay);
-            print ("Aceptable Delay %s\n", (aceptable_delay) ? "true" : "false");
-            aceptable_delay = matchedEvents[matchedEvents.length].timestamp - matchedEvents[0].timestamp < maximum_delay;
+            print ("Aceptable Delay %s\n", aceptable_delay.to_string ());
             pressed_buttons = pressed_buttons.strip ();
             if (combination == pressed_buttons && aceptable_delay) {
                 print ("Match found\n");

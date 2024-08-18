@@ -1,12 +1,22 @@
-[
-  {
-    "delay": 500,
-    "keybing": ["L1", "R1"],
-    "action": "Window::Main"
-  },
-  {
-    "delay": 1000,
-    "keybinding": ["L1", "Circle"],
-    "action": "ShellScript('~/local/bin/record_obs.sh')"
+{
+  "modules": {
+    "pulseaudio": {
+      "max_volume": 100
+    },
+    "joystick": {
+      "read_buttons_delay": 200,
+      "keybindings": [
+        {
+          "delay": 500,
+          "keybing": ["L1", "R1"],
+          "action": "Window::Main"
+        },
+        {
+          "delay": 1000,
+          "keybinding": ["L1 + Circle"],
+          "action": "ShellScript('~/local/bin/record_obs.sh')"
+        }
+      ]
+    }
   }
-]
+}

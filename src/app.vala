@@ -8,10 +8,6 @@ public class App {
     }
 
     static void main (string[] args) {
-        App app = new App ();
-        app.run (args);
-
-        // Pulse.Application[] apps = pulse.get_applications ();
-        // print ("aqui:%s \n", pulse.get_default_sink ());
+        MainWindow.render (args);
     }
 }

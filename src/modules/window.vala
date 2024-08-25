@@ -1,38 +1,38 @@
-#! /usr/bin/env -S vala --pkg gtk+-3.0
-
 public class MainWindow : Gtk.Application {
     private Pulse pulse;
     private Joystick joystick;
     private MainLoop loop;
+    private Gtk.ApplicationWindow window;
 
     protected override void activate () {
         this.loop = new GLib.MainLoop ();
         // this.joystick = new Joystick ();
         this.pulse = new Pulse ();
         Gtk.ApplicationWindow window = new Gtk.ApplicationWindow (this);
+        this.joystick = new Joystick (this);
         this.setup_window (window);
-
-        // read joystick events
-        // var timeout = new GLib.TimeoutSource (200);
-        // timeout.set_callback (() => {
-        // this.joystick.readEvents ();
-        // return true;
-        // });
-        // timeout.attach (this.loop.get_context ());
-
         window.show_all ();
+
+        this.window = window;
     }
 
     public void setup_window (Gtk.ApplicationWindow window) {
+        var cssProvider = new Gtk.CssProvider ();
+        cssProvider.load_from_path ("src/app.css");
+        Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+
         window.title = "Linux Game Bar";
+        print ("CWD %s", GLib.Environment.get_variable ("PWD"));
+
         // window.window_position = Gtk.WindowPosition.CENTER;
-        window.destroy.connect (Gtk.main_quit);
-        window.default_width = 1366;
-        window.default_height = 768;
-        window.decorated = true;
-        window.set_gravity (Gdk.Gravity.CENTER);
+        // window.default_width = 1366;
+        // window.default_height = 768;
+        // window.decorated = true;
+        // window.set_gravity (Gdk.Gravity.CENTER);
         // window.fullscreen ();
         // window.opacity = 0;
+
+        window.destroy.connect (Gtk.main_quit);
 
         // sections
         Gtk.Box left = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
@@ -67,7 +67,6 @@ public class MainWindow : Gtk.Application {
         });
 
         // Pulse audio applications
-        // TODO: For each of running applications
 
         Gtk.Expander expander = new Gtk.Expander ("Aplicações");
         // Gtk.Label label2 = new Gtk.Label ("Firefox");
@@ -77,7 +76,7 @@ public class MainWindow : Gtk.Application {
         // box2.add (volume2);
         // expander.add (box2);
         foreach (var application in this.pulse.get_applications ()) {
-            Gtk.Label label2 = new Gtk.Label (application.name);
+            Gtk.Label label2 = new Gtk.Label (application.name + " - " + application.title);
             Gtk.Scale volume2 = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
 
             volume2.set_value (application.volume);
@@ -108,6 +107,7 @@ public class MainWindow : Gtk.Application {
         string now = new GLib.DateTime.now ().format ("%H:%M:%S");
         Gtk.Label clock = new Gtk.Label (now);
 
+        // update clock
         var timeout = new GLib.TimeoutSource (1000);
         timeout.set_callback (() => {
             now = new GLib.DateTime.now ().format ("%H:%M:%S");
@@ -115,6 +115,14 @@ public class MainWindow : Gtk.Application {
             return true;
         });
         timeout.attach (this.loop.get_context ());
+
+        // read joystick events
+        var timeout_joystick = new GLib.TimeoutSource (200);
+        timeout_joystick.set_callback (() => {
+            this.joystick.readEvents ();
+            return true;
+        });
+        timeout_joystick.attach (this.loop.get_context ());
 
 
         // Left Menu
@@ -138,5 +146,21 @@ public class MainWindow : Gtk.Application {
     public static int render (string[] args) {
         MainWindow app = new MainWindow ();
         return app.run (args);
+    }
+
+    public void toggle () {
+        if (this.window.visible) {
+            this.window.hide ();
+        } else {
+            this.window.show ();
+        }
+    }
+
+    public bool visible () {
+        return this.window.visible;
+    }
+
+    public Gtk.ApplicationWindow get_window () {
+        return this.window;
     }
 }

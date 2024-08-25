@@ -8,8 +8,7 @@ public class Controller {
         uint32 button_id;
     }
     public Button[] getButtons (bool debug = true) {
-
-        if (debug) {
+        if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
             for (int i = 0; i < this.buttons.length; i++) {
                 print ("Button Name: %s, Button id:%d\n", this.buttons[i].button_name, (int) this.buttons[i].button_id);
             }
@@ -92,6 +91,14 @@ public class Joystick {
 
     public Controller controller;
 
+    public GLib.Object modules;
+
+    public string[] commands = {
+        "MainWindow::toggle",
+        "Pulse::volume_up_sink",
+        "Pulse::volume_down_sink",
+    };
+
     public bool addEvent (event button_event) {
         uint32 current_event_id = -1;
 
@@ -132,8 +139,6 @@ public class Joystick {
             pressed_buttons = pressed_buttons.strip ();
         }
 
-
-
         return true;
     }
 
@@ -141,7 +146,10 @@ public class Joystick {
         return this.events;
     }
 
-    public Joystick () {
+    public MainWindow window;
+
+    public Joystick (MainWindow window) {
+
         // SDL.Input.Joystick[] _joysticks = {};
         SDL.init (SDL.InitFlag.EVERYTHING);
         int joysticks = SDL.Input.Joystick.count ();
@@ -153,11 +161,14 @@ public class Joystick {
                 string power_level = this.translate_joystick_level (joystick.get_current_powerlevel ());
                 this.controller = Controller.init (joystick_name);
 
-                print ("Joystick %s\n", joystick_name);
-                print ("Joystick Power: %s\n", power_level);
-                print ("Joystick GUID: %s\n", SDL.Input.Joystick.get_guid_string (joystick.get_guid ()));
+                if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
+                    print ("Joystick %s\n", joystick_name);
+                    print ("Joystick Power: %s\n", power_level);
+                    print ("Joystick GUID: %s\n", SDL.Input.Joystick.get_guid_string (joystick.get_guid ()));
+                }
             }
         }
+        this.window = window;
     }
 
     public string translate_joystick_level (SDL.Input.JoystickPowerLevel power_level) {
@@ -199,6 +210,7 @@ public class Joystick {
     public void wait_event (SDL.Event event) {
         string button_state = event.jbutton.state == 1 ? "pressed" : "release";
         uint32 button_id = event.button.which > 255 ? event.button.which - 256 : event.button.which;
+        Gtk.Widget current_widget = this.window.get_window ().get_focus ();
 
         if (event.type == SDL.EventType.JOYBUTTONDOWN) {
             Joystick.event joystickEvent = Joystick.event ();
@@ -209,7 +221,37 @@ public class Joystick {
             joystickEvent.type = button_state;
             joystickEvent.timestamp = double.parse (timestamp);
 
+            if (button_name == "ARROW_DOWN" && this.window.visible ()) {
+                this.window.get_window ().child_focus (Gtk.DirectionType.DOWN);
+            }
+            if (button_name == "ARROW_UP" && this.window.visible ()) {
+                this.window.get_window ().child_focus (Gtk.DirectionType.UP);
+            }
+
+            if (current_widget is Gtk.Scale) {
+                double value = current_widget.get_value ();
+                double new_value = value;
+                if (button_name == "ARROW_LEFT") {
+                    new_value = value - 10;
+                }
+
+                if (button_name == "ARROW_RIGHT") {
+                    new_value = value + 10;
+                }
+                current_widget.set_value (new_value);
+            }
+
+            if (current_widget is Gtk.Expander) {
+                bool expanded = current_widget.expanded;
+                if (button_name == "CROSS") {
+                    expanded = !expanded;
+                }
+
+                current_widget.expanded = expanded;
+            }
+
             this.addEvent (joystickEvent);
+
             this.process_buttons ();
         }
 
@@ -235,17 +277,21 @@ public class Joystick {
             }
         }
 
-        if (matchedEvents.length > 1) {
+        if (matchedEvents.length > 0) {
             double event_start = matchedEvents[0].timestamp;
             double event_end = matchedEvents[matchedEvents.length - 1].timestamp;
             double event_diff = event_end - event_start;
             aceptable_delay = event_diff < maximum_delay;
-            print ("Event diff %f\n", event_diff);
-            print ("Maximun delay %f\n", maximum_delay);
-            print ("Aceptable Delay %s\n", aceptable_delay.to_string ());
-            pressed_buttons = pressed_buttons.strip ();
-            if (combination == pressed_buttons && aceptable_delay) {
-                print ("Match found\n");
+
+            if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
+                print ("Event diff %f\n", event_diff);
+                print ("Maximun delay %f\n", maximum_delay);
+                print ("Aceptable Delay %s\n", aceptable_delay.to_string ());
+                pressed_buttons = pressed_buttons.strip ();
+                if (combination == pressed_buttons && aceptable_delay) {
+                    this.window.toggle ();
+                    print ("Match found\n");
+                }
             }
         }
     }

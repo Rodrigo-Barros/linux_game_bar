@@ -75,7 +75,9 @@ public class Pulse : GLib.Object {
                     application.icon = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_ICON_NAME);
                     application.volume = int.parse (sink.volume.avg ().sprint ().replace ("%", ""));
                     applications += application;
-                    stdout.printf ("App: %s,title: %s, volume:%s \n", application.name, application.title, application.cvolume.to_string ());
+                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                        stdout.printf ("App: %s,title: %s, volume:%s \n", application.name, application.title, application.cvolume.to_string ());
+                    }
                 }
                 if (eol == 1) {
                     c.disconnect ();
@@ -133,7 +135,9 @@ public class Pulse : GLib.Object {
         this.exec ((c) => {
             default_sink.cvolume.set (default_sink.cvolume.channels, volume_new);
             c.set_sink_volume_by_index (default_sink.id, default_sink.cvolume, (c) => {
-                print ("Volume definido para %d\n", (int) volume_new);
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("Volume definido para %d\n", (int) volume_new);
+                }
                 c.disconnect ();
             });
         });
@@ -147,15 +151,19 @@ public class Pulse : GLib.Object {
         uint32 volume_current = volume_old - decrease < 0 ? 0 : volume_old - decrease;
         uint32 volume_new = (volume_max * volume_current) / 100;
 
-        print ("DECREASE %f\n", decrease);
-        print ("OLD %f\n", volume_old);
-        print ("CURRENT %f\n", volume_current);
-        print ("NEW %f\n", volume_current);
+        if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+            print ("DECREASE %f\n", decrease);
+            print ("OLD %f\n", volume_old);
+            print ("CURRENT %f\n", volume_current);
+            print ("NEW %f\n", volume_current);
+        }
 
         this.exec ((c) => {
             default_sink.cvolume.set (default_sink.cvolume.channels, volume_new);
             c.set_sink_volume_by_index (default_sink.id, default_sink.cvolume, (c) => {
-                print ("Volume definido para %d\n", (int) volume_new);
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("Volume definido para %d\n", (int) volume_new);
+                }
                 c.disconnect ();
             });
         });
@@ -174,22 +182,26 @@ public class Pulse : GLib.Object {
             float percentual_aumento = (100 * valor_diminuicao) / (float) PulseAudio.Volume.NORM;
             uint32 volume_atual = ((int) volume_anterior + (int) valor_diminuicao);
 
-            print ("valor aumento: %f\n", valor_diminuicao);
-            print ("percentual diminuicao: %f\n", percentual_aumento);
-
+            if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                print ("valor aumento: %f\n", valor_diminuicao);
+                print ("percentual diminuicao: %f\n", percentual_aumento);
+            }
             if ((int) volume_atual <= volume_min) {
                 volume_atual = volume_min;
             }
 
 
             if (application_id == id) {
-                stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
-                stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
-
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
+                    stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
+                }
                 this.exec ((c) => {
                     volume.set (volume.channels, volume_atual);
                     c.set_sink_input_volume (application_id, volume, (c) => {
-                        print ("Volume definido para %d\n", (int) volume_atual);
+                        if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                            print ("Volume definido para %d\n", (int) volume_atual);
+                        }
                         c.disconnect ();
                     });
                 });
@@ -224,13 +236,16 @@ public class Pulse : GLib.Object {
 
 
             if (application_id == id) {
-                stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
-                stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
-
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
+                    stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
+                }
                 this.exec ((c) => {
                     volume.set (volume.channels, volume_atual);
                     c.set_sink_input_volume (application_id, volume, (c) => {
-                        print ("Volume definido para %d\n", (int) volume_atual);
+                        if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                            print ("Volume definido para %d\n", (int) volume_atual);
+                        }
                         c.disconnect ();
                     });
                 });

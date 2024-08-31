@@ -1,4 +1,24 @@
 expander:focus,
 scale:focus {
-    border: solid 0.2px black;
+    border: solid 0.3px rgba(255, 255, 255, 0.5);
+    border-radius: 5px;
+}
+
+/* reference: https://github.com/dekotale/GameBar-Overlay/blob/main/stylesheet.css */
+.background {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.clock {
+    font-size: 72px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    color: white;
+}
+
+.pulse {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    color: white;
+    padding: 10px;
 }

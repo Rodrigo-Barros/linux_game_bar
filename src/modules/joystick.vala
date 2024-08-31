@@ -287,11 +287,11 @@ public class Joystick {
                 print ("Event diff %f\n", event_diff);
                 print ("Maximun delay %f\n", maximum_delay);
                 print ("Aceptable Delay %s\n", aceptable_delay.to_string ());
-                pressed_buttons = pressed_buttons.strip ();
-                if (combination == pressed_buttons && aceptable_delay) {
-                    this.window.toggle ();
-                    print ("Match found\n");
-                }
+            }
+            pressed_buttons = pressed_buttons.strip ();
+            if (combination == pressed_buttons && aceptable_delay) {
+                this.window.toggle ();
+                print ("Match found\n");
             }
         }
     }

@@ -1,6 +1,6 @@
 public class App {
 
-    static void main (string[] args) {
-        MainWindow.render (args);
+    static int main (string[] args) {
+        return MainWindow.render (args);
     }
 }

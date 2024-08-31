@@ -18,12 +18,13 @@ public class MainWindow : Gtk.Application {
 
     public void setup_window (Gtk.ApplicationWindow window) {
         var cssProvider = new Gtk.CssProvider ();
-        cssProvider.load_from_path ("src/app.css");
+        cssProvider.load_from_path ("../src/app.css");
         Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
 
         window.title = "Linux Game Bar";
-        print ("CWD %s", GLib.Environment.get_variable ("PWD"));
-
+        if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+            print ("CWD %s", GLib.Environment.get_variable ("PWD"));
+        }
         // window.window_position = Gtk.WindowPosition.CENTER;
         // window.default_width = 1366;
         // window.default_height = 768;
@@ -48,6 +49,7 @@ public class MainWindow : Gtk.Application {
         Pulse.DefaultSink default_sink = this.pulse.get_default_sink ();
         Gtk.Label label = new Gtk.Label ("System " + default_sink.name);
         Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
+        Gtk.Box div = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
 
         volume.set_value (default_sink.volume);
         volume.value_changed.connect ((scale) => {
@@ -56,14 +58,20 @@ public class MainWindow : Gtk.Application {
             int volume_diff = volume_current - volume_old;
 
             if (volume_diff < 0) {
-                print ("diminuindo o volume do sistema em %f\n", volume_diff);
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("diminuindo o volume do sistema em %f\n", volume_diff);
+                }
                 this.pulse.volume_down_sink (default_sink, volume_diff);
             } else {
-                print ("aumentando o volume do sistema\n");
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("aumentando o volume do sistema\n");
+                }
                 this.pulse.volume_up_sink (default_sink, volume_diff);
             }
             default_sink.volume = volume_old + volume_diff;
-            print ("Novo Volume %d\n", default_sink.volume);
+            if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                print ("Novo Volume %d\n", default_sink.volume);
+            }
         });
 
         // Pulse audio applications
@@ -76,7 +84,12 @@ public class MainWindow : Gtk.Application {
         // box2.add (volume2);
         // expander.add (box2);
         foreach (var application in this.pulse.get_applications ()) {
-            Gtk.Label label2 = new Gtk.Label (application.name + " - " + application.title);
+            string title = (application.name + " - " + application.title);
+            int title_size = title.length;
+            int title_limit = 50;
+            title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
+
+            Gtk.Label label2 = new Gtk.Label (title);
             Gtk.Scale volume2 = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
 
             volume2.set_value (application.volume);
@@ -85,16 +98,28 @@ public class MainWindow : Gtk.Application {
                 int volume_current = int.parse (scale.get_value ().to_string ());
                 int volume_diff = volume_current - volume_old;
 
-                print ("volume_diff: %d\n", volume_diff);
+                if (volume_current == 100 || volume_current == 0) {
+                    volume2.error_bell ();
+                }
+
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("volume_diff: %d\n", volume_diff);
+                }
                 if (volume_diff < 0) {
-                    print ("diminuindo volume %s \n", application.name);
+                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                        print ("diminuindo volume %s \n", application.name);
+                    }
                     this.pulse.volume_down_application (application.id, volume_diff);
                 } else {
-                    print ("aumentando volume %s \n", application.name);
+                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                        print ("aumentando volume %s \n", application.name);
+                    }
                     this.pulse.volume_up_application (application.id, volume_diff);
                 }
                 application.volume = volume_old + volume_diff;
-                print ("Novo Volume %d\n", application.volume);
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("Novo Volume %d\n", application.volume);
+                }
             });
 
             box2.add (label2);
@@ -106,6 +131,7 @@ public class MainWindow : Gtk.Application {
         // Rigth menu widgets
         string now = new GLib.DateTime.now ().format ("%H:%M:%S");
         Gtk.Label clock = new Gtk.Label (now);
+        clock.get_style_context ().add_class ("clock");
 
         // update clock
         var timeout = new GLib.TimeoutSource (1000);
@@ -126,10 +152,16 @@ public class MainWindow : Gtk.Application {
 
 
         // Left Menu
-        left.add (label);
-        left.add (volume);
+        // left.add (label);
+        // left.add (volume);
 
-        left.add (expander);
+        // left.add (expander);
+
+        div.add (label);
+        div.add (volume);
+        div.add (expander);
+        div.get_style_context ().add_class ("pulse");
+        left.add (div);
 
         // Center Menu
 

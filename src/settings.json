@@ -1,7 +1,10 @@
 {
   "modules": {
     "pulseaudio": {
-      "max_volume": 100
+      "max_volume": {
+        "description": "Volume máximo que o sistema poderá aumentar o volume das aplicações",
+        "value": 100
+      }
     },
     "joystick": {
       "read_buttons_delay": 200,

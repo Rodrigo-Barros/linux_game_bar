@@ -1,0 +1,88 @@
+#! /usr/bin/valac --pkg gio-2.0
+
+[DBus (name = "org.freedesktop.DBus")]
+interface Freedesktop : Object {
+    public abstract string[] list_names () throws GLib.Error;
+}
+
+[DBus (name = "org.mpris.MediaPlayer2.Player")]
+interface Player : Object {
+    public abstract bool can_go_previous { get; }
+    public abstract bool can_play { get; }
+    public abstract bool can_go_next { get; }
+    public abstract string playback_status { owned get; }
+
+    public abstract void previous () throws GLib.Error;
+    public abstract void next () throws GLib.Error;
+    public abstract void play_pause () throws GLib.Error;
+}
+
+public class MediaPlayer : Object {
+    Player player = null;
+
+    public MediaPlayer () {
+        string player_name = this.getPlayer ();
+        try {
+            this.player = Bus.get_proxy_sync (BusType.SESSION, player_name, "/org/mpris/MediaPlayer2");
+        } catch (GLib.Error e) {
+            stdout.printf ("%s\n", e.message);
+        }
+    }
+
+    public string[] getBusNames () {
+        Freedesktop freedesktop = null;
+        string[] bus_names = {};
+        try {
+            freedesktop = Bus.get_proxy_sync (BusType.SESSION, "org.freedesktop.DBus", "/org/freedesktop/DBus");
+            foreach (string name in freedesktop.list_names ()) {
+                bus_names += name;
+            }
+        } catch (GLib.Error e) {
+            print ("Dbus Connect Error: %s", e.message);
+        }
+        return bus_names;
+    }
+
+    public string getPlayer () {
+        string player = "";
+        foreach (string name in this.getBusNames ()) {
+            if ("org.mpris.MediaPlayer2" in name) {
+                player = name;
+                break;
+            }
+        }
+        return player;
+    }
+
+    public void prev (Gtk.Button btn) {
+        if (this.player.can_go_previous) {
+            this.player.previous ();
+        }
+    }
+
+    public string get_play_image (bool reverse = false) {
+        string btn_image = "";
+        if (reverse == false) {
+            btn_image = this.player.playback_status == "Paused" ? "media-playback-start-symbolic" : "media-playback-pause-symbolic";
+        } else {
+            btn_image = this.player.playback_status == "Paused" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic";
+        }
+        return btn_image;
+    }
+
+    public void play_pause (Gtk.Button btn) {
+        if (this.player.can_play) {
+            Gtk.Image image = new Gtk.Image ();
+            this.player.play_pause ();
+            string btn_image = this.get_play_image (true);
+            btn.set_image (image);
+            image.set_from_icon_name (btn_image, Gtk.IconSize.BUTTON);
+        }
+    }
+
+    public void next (Gtk.Button btn) {
+        if (this.player.can_go_next) {
+            this.player.next ();
+        }
+    }
+}

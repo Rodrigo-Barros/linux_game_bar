@@ -227,8 +227,10 @@ public class Pulse : GLib.Object {
             uint32 volume_atual = ((int) volume_anterior + (int) valor_aumento);
 
 
-            print ("valor aumento: %f\n", valor_aumento);
-            print ("percentual diminuicao: %f\n", percentual_aumento);
+            if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                print ("valor aumento: %f\n", valor_aumento);
+                print ("percentual diminuicao: %f\n", percentual_aumento);
+            }
 
             if ((int) volume_atual >= volume_max) {
                 volume_atual = volume_max;

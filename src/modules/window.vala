@@ -1,6 +1,7 @@
 public class MainWindow : Gtk.Application {
     private Pulse pulse;
     private Joystick joystick;
+    private MediaPlayer media_player;
     private MainLoop loop;
     private Gtk.ApplicationWindow window;
 
@@ -10,25 +11,36 @@ public class MainWindow : Gtk.Application {
         this.pulse = new Pulse ();
         Gtk.ApplicationWindow window = new Gtk.ApplicationWindow (this);
         this.joystick = new Joystick (this);
+        this.media_player = new MediaPlayer ();
         this.setup_window (window);
+        Settings settings = new Settings ();
         window.show_all ();
 
         this.window = window;
     }
 
     public void setup_window (Gtk.ApplicationWindow window) {
-        var cssProvider = new Gtk.CssProvider ();
-        cssProvider.load_from_path ("../src/app.css");
-        Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+        try {
+            var cssProvider = new Gtk.CssProvider ();
+            cssProvider.load_from_path ("../src/app.css");
+            Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+        } catch (Error e) {
+            print ("O arquivo de estilo não foi encontrado");
+        }
+
+        Gdk.Screen screen = Gdk.Screen.get_default ();
 
         window.title = "Linux Game Bar";
         if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
             print ("CWD %s", GLib.Environment.get_variable ("PWD"));
         }
         // window.window_position = Gtk.WindowPosition.CENTER;
-        // window.default_width = 1366;
-        // window.default_height = 768;
+        window.default_width = screen.get_width ();
+        window.default_height = screen.get_height ();
         // window.decorated = true;
+        // window.set_size_request (1366, 768);
+        // window.set_role ("app");
+        // window.fullscreen ();
         // window.set_gravity (Gdk.Gravity.CENTER);
         // window.fullscreen ();
         // window.opacity = 0;
@@ -49,7 +61,15 @@ public class MainWindow : Gtk.Application {
         Pulse.DefaultSink default_sink = this.pulse.get_default_sink ();
         Gtk.Label label = new Gtk.Label ("System " + default_sink.name);
         Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
-        Gtk.Box div = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Box pulse_audio = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Box media_control = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 1);
+        Gtk.Button media_prev = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.BUTTON);
+        Gtk.Button media_play_pause = new Gtk.Button.from_icon_name (this.media_player.get_play_image (), Gtk.IconSize.BUTTON);
+        Gtk.Button media_next = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.BUTTON);
+
+        media_prev.clicked.connect (this.media_player.prev);
+        media_play_pause.clicked.connect (this.media_player.play_pause);
+        media_next.clicked.connect (this.media_player.next);
 
         volume.set_value (default_sink.volume);
         volume.value_changed.connect ((scale) => {
@@ -157,11 +177,18 @@ public class MainWindow : Gtk.Application {
 
         // left.add (expander);
 
-        div.add (label);
-        div.add (volume);
-        div.add (expander);
-        div.get_style_context ().add_class ("pulse");
-        left.add (div);
+        pulse_audio.add (label);
+        pulse_audio.add (volume);
+        pulse_audio.add (expander);
+        pulse_audio.get_style_context ().add_class ("pulse");
+
+        media_control.add (media_prev);
+        media_control.add (media_play_pause);
+        media_control.add (media_next);
+        media_control.get_style_context ().add_class ("media-control");
+        media_control.homogeneous = true;
+        left.add (pulse_audio);
+        left.add (media_control);
 
         // Center Menu
 

@@ -22,3 +22,21 @@ scale:focus {
     color: white;
     padding: 10px;
 }
+
+.media-control {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+}
+
+.media-control button {
+    all: initial;
+    padding: 10px;
+    margin: 5px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 15px;
+    color: white;
+}
+
+.media-control button:focus {
+    background: rgba(0, 0, 0, 0.4);
+}

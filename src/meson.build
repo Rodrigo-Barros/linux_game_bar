@@ -7,7 +7,8 @@ dependencies = [
     dependency('libpulse-mainloop-glib'),
     dependency('gee-0.8'),
     dependency('sdl2'),
-    dependency('gtk+-3.0')
+    dependency('gtk+-3.0'),
+    dependency('json-glib-1.0')
 ]
 
 sources = [
@@ -15,6 +16,8 @@ sources = [
     files('modules/joystick.vala'),
     files('modules/pulse_audio.vala'),
     files('modules/window.vala'),
+    files('modules/settings.vala'),
+    files('modules/media_player.vala')
 ]
 
 executable('linux_game_bar', sources, dependencies: dependencies)

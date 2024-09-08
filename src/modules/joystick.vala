@@ -228,6 +228,15 @@ public class Joystick {
                 this.window.get_window ().child_focus (Gtk.DirectionType.UP);
             }
 
+            if (button_name == "ARROW_LEFT" && this.window.visible ()) {
+                this.window.get_window ().child_focus (Gtk.DirectionType.LEFT);
+            }
+
+            if (button_name == "ARROW_RIGHT" && this.window.visible ()) {
+                this.window.get_window ().child_focus (Gtk.DirectionType.RIGHT);
+            }
+
+
             if (current_widget is Gtk.Scale) {
                 double value = current_widget.get_value ();
                 double new_value = value;
@@ -239,6 +248,12 @@ public class Joystick {
                     new_value = value + 10;
                 }
                 current_widget.set_value (new_value);
+            }
+
+            if (button_name == "CROSS") {
+                if (current_widget is Gtk.Button) {
+                    current_widget.clicked ();
+                }
             }
 
             if (current_widget is Gtk.Expander) {
@@ -254,7 +269,6 @@ public class Joystick {
 
             this.process_buttons ();
         }
-
 
         if (event.type == SDL.EventType.QUIT) {
             print ("Exiting....\n");
@@ -291,7 +305,9 @@ public class Joystick {
             pressed_buttons = pressed_buttons.strip ();
             if (combination == pressed_buttons && aceptable_delay) {
                 this.window.toggle ();
-                print ("Match found\n");
+                if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
+                    print ("Match found\n");
+                }
             }
         }
     }

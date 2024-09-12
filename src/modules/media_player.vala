@@ -81,6 +81,24 @@ public class MediaPlayer : Object {
         }
     }
 
+    public string get_title (uint title_limit = 50) {
+        string title;
+        uint title_size;
+        title = this.get_media_prop ("xesam:title");
+        title = title != null ? title : null;
+        title_size = title.length;
+
+        if (title != null) {
+            title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
+        }
+
+        return title;
+    }
+
+    public string get_image () {
+        return this.get_media_prop ("mpris:artUrl").replace ("file://", "");
+    }
+
     public void next (Gtk.Button btn) {
         if (this.player.can_go_next) {
             this.player.next ();

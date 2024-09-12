@@ -50,8 +50,8 @@ public class MainWindow : Gtk.Application {
         // widgets
         // Global Widgets
 
-        string player_title = this.media_player.get_media_prop ("xesam:title");
-        string player_image = this.media_player.get_media_prop ("mpris:artUrl").replace ("file://", "");
+        string player_title = this.media_player.get_title ();
+        string player_image = this.media_player.get_image ();
 
         // Left menu widgets
         Pulse.DefaultSink default_sink = this.pulse.get_default_sink ();
@@ -116,20 +116,28 @@ public class MainWindow : Gtk.Application {
 
         // update clock
         var timeout = new GLib.TimeoutSource (1000);
+        var pulse_timeout = new GLib.TimeoutSource (10000);
         timeout.set_callback (() => {
             now = new GLib.DateTime.now ().format ("%H:%M:%S");
             clock.label = now;
-            // this.render_pulse (box2);
 
-            player_title = this.media_player.get_media_prop ("xesam:title");
-            player_image = this.media_player.get_media_prop ("mpris:artUrl").replace ("file://", "");
+            player_title = this.media_player.get_title ();
+            player_image = this.media_player.get_image ();
             player_title = player_title == null ? "No Media" : player_title;
 
             media_control_label.set_label (player_title);
             media_control_image.set_from_file (player_image);
+
+            return true;
+        });
+
+        pulse_timeout.set_callback (() => {
+            this.render_pulse (box2);
             return true;
         });
         timeout.attach (this.loop.get_context ());
+        pulse_timeout.attach (this.loop.get_context ());
+
 
         // read joystick events
         var timeout_joystick = new GLib.TimeoutSource (200);
@@ -201,16 +209,25 @@ public class MainWindow : Gtk.Application {
 
         GLib.List<weak Gtk.Widget> children = box.get_children ();
         bool clear_children = children.length () > 0;
+        Gtk.Widget focus_child = box.get_focus_child ();
+        int focus_id = 0;
+        int counter = 0;
+        if (clear_children) {
+            box.foreach ((el) => {
+                box.remove (el);
+            });
+        }
 
         foreach (var application in this.pulse.get_applications ()) {
             string title = (application.name + " - " + application.title);
             int title_size = title.length;
             int title_limit = 50;
+            Gtk.Label label;
+            Gtk.Scale volume;
             title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
 
-            Gtk.Label label = new Gtk.Label (title);
-            Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
-
+            label = new Gtk.Label (title);
+            volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
 
             volume.set_value (application.volume);
             volume.value_changed.connect ((scale) => {
@@ -244,6 +261,10 @@ public class MainWindow : Gtk.Application {
 
             box.add (label);
             box.add (volume);
+        }
+
+        if (clear_children) {
+            box.show_all ();
         }
     }
 }

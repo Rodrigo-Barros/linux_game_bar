@@ -4,6 +4,20 @@ scale:focus {
     border-radius: 5px;
 }
 
+expander title {
+    outline: unset;
+}
+
+.titlebar {
+    all: initial;
+    background: rgba(0, 0, 0, 0.8);
+    border: unset;
+}
+.titlebar label,
+.titlebar button {
+    opacity: 0;
+}
+
 /* reference: https://github.com/dekotale/GameBar-Overlay/blob/main/stylesheet.css */
 .background {
     background: rgba(0, 0, 0, 0.8);
@@ -26,15 +40,15 @@ scale:focus {
 .media-control {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 15px;
+    color: white;
 }
 
 .media-control button {
     all: initial;
     padding: 10px;
     margin: 5px;
-    background: rgba(255, 255, 255, 0.25);
+    /* background: rgba(255, 255, 255, 0.25); */
     border-radius: 15px;
-    color: white;
 }
 
 .media-control button:focus {

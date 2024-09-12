@@ -37,13 +37,6 @@ public class MainWindow : Gtk.Application {
         // window.window_position = Gtk.WindowPosition.CENTER;
         window.default_width = screen.get_width ();
         window.default_height = screen.get_height ();
-        // window.decorated = true;
-        // window.set_size_request (1366, 768);
-        // window.set_role ("app");
-        // window.fullscreen ();
-        // window.set_gravity (Gdk.Gravity.CENTER);
-        // window.fullscreen ();
-        // window.opacity = 0;
 
         window.destroy.connect (Gtk.main_quit);
 
@@ -57,12 +50,18 @@ public class MainWindow : Gtk.Application {
         // widgets
         // Global Widgets
 
+        string player_title = this.media_player.get_media_prop ("xesam:title");
+        string player_image = this.media_player.get_media_prop ("mpris:artUrl").replace ("file://", "");
+
         // Left menu widgets
         Pulse.DefaultSink default_sink = this.pulse.get_default_sink ();
         Gtk.Label label = new Gtk.Label ("System " + default_sink.name);
         Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
         Gtk.Box pulse_audio = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
-        Gtk.Box media_control = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 1);
+        Gtk.Box media_control = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Box media_control_h = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 1);
+        Gtk.Image media_control_image = new Gtk.Image ();
+        Gtk.Label media_control_label = new Gtk.Label ("No Media");
         Gtk.Button media_prev = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.BUTTON);
         Gtk.Button media_play_pause = new Gtk.Button.from_icon_name (this.media_player.get_play_image (), Gtk.IconSize.BUTTON);
         Gtk.Button media_next = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.BUTTON);
@@ -71,11 +70,18 @@ public class MainWindow : Gtk.Application {
         media_play_pause.clicked.connect (this.media_player.play_pause);
         media_next.clicked.connect (this.media_player.next);
 
+        media_control_image.set_from_file (player_image);
+        media_control_label.set_label (player_title);
         volume.set_value (default_sink.volume);
+
         volume.value_changed.connect ((scale) => {
             int volume_old = default_sink.volume;
             int volume_current = (int) scale.get_value ();
             int volume_diff = volume_current - volume_old;
+
+            if (volume_current == 100 || volume_current == 0) {
+                volume.error_bell ();
+            }
 
             if (volume_diff < 0) {
                 if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
@@ -97,54 +103,9 @@ public class MainWindow : Gtk.Application {
         // Pulse audio applications
 
         Gtk.Expander expander = new Gtk.Expander ("Aplicações");
-        // Gtk.Label label2 = new Gtk.Label ("Firefox");
-        // Gtk.Scale volume2 = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
+
         Gtk.Box box2 = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
-        // box2.add (label2);
-        // box2.add (volume2);
-        // expander.add (box2);
-        foreach (var application in this.pulse.get_applications ()) {
-            string title = (application.name + " - " + application.title);
-            int title_size = title.length;
-            int title_limit = 50;
-            title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
-
-            Gtk.Label label2 = new Gtk.Label (title);
-            Gtk.Scale volume2 = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
-
-            volume2.set_value (application.volume);
-            volume2.value_changed.connect ((scale) => {
-                int volume_old = application.volume;
-                int volume_current = int.parse (scale.get_value ().to_string ());
-                int volume_diff = volume_current - volume_old;
-
-                if (volume_current == 100 || volume_current == 0) {
-                    volume2.error_bell ();
-                }
-
-                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                    print ("volume_diff: %d\n", volume_diff);
-                }
-                if (volume_diff < 0) {
-                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                        print ("diminuindo volume %s \n", application.name);
-                    }
-                    this.pulse.volume_down_application (application.id, volume_diff);
-                } else {
-                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                        print ("aumentando volume %s \n", application.name);
-                    }
-                    this.pulse.volume_up_application (application.id, volume_diff);
-                }
-                application.volume = volume_old + volume_diff;
-                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                    print ("Novo Volume %d\n", application.volume);
-                }
-            });
-
-            box2.add (label2);
-            box2.add (volume2);
-        }
+        this.render_pulse (box2);
         expander.add (box2);
 
 
@@ -158,6 +119,14 @@ public class MainWindow : Gtk.Application {
         timeout.set_callback (() => {
             now = new GLib.DateTime.now ().format ("%H:%M:%S");
             clock.label = now;
+            // this.render_pulse (box2);
+
+            player_title = this.media_player.get_media_prop ("xesam:title");
+            player_image = this.media_player.get_media_prop ("mpris:artUrl").replace ("file://", "");
+            player_title = player_title == null ? "No Media" : player_title;
+
+            media_control_label.set_label (player_title);
+            media_control_image.set_from_file (player_image);
             return true;
         });
         timeout.attach (this.loop.get_context ());
@@ -182,11 +151,16 @@ public class MainWindow : Gtk.Application {
         pulse_audio.add (expander);
         pulse_audio.get_style_context ().add_class ("pulse");
 
-        media_control.add (media_prev);
-        media_control.add (media_play_pause);
-        media_control.add (media_next);
         media_control.get_style_context ().add_class ("media-control");
-        media_control.homogeneous = true;
+        media_control.add (media_control_label);
+        media_control.add (media_control_image);
+
+        media_control_h.add (media_prev);
+        media_control_h.add (media_play_pause);
+        media_control_h.add (media_next);
+        media_control_h.homogeneous = true;
+
+        media_control.add (media_control_h);
         left.add (pulse_audio);
         left.add (media_control);
 
@@ -221,5 +195,55 @@ public class MainWindow : Gtk.Application {
 
     public Gtk.ApplicationWindow get_window () {
         return this.window;
+    }
+
+    public void render_pulse (Gtk.Box box) {
+
+        GLib.List<weak Gtk.Widget> children = box.get_children ();
+        bool clear_children = children.length () > 0;
+
+        foreach (var application in this.pulse.get_applications ()) {
+            string title = (application.name + " - " + application.title);
+            int title_size = title.length;
+            int title_limit = 50;
+            title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
+
+            Gtk.Label label = new Gtk.Label (title);
+            Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
+
+
+            volume.set_value (application.volume);
+            volume.value_changed.connect ((scale) => {
+                int volume_old = application.volume;
+                int volume_current = int.parse (scale.get_value ().to_string ());
+                int volume_diff = volume_current - volume_old;
+
+                if (volume_current == 100 || volume_current == 0) {
+                    volume.error_bell ();
+                }
+
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("volume_diff: %d\n", volume_diff);
+                }
+                if (volume_diff < 0) {
+                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                        print ("diminuindo volume %s \n", application.name);
+                    }
+                    this.pulse.volume_down_application (application.id, volume_diff);
+                } else {
+                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                        print ("aumentando volume %s \n", application.name);
+                    }
+                    this.pulse.volume_up_application (application.id, volume_diff);
+                }
+                application.volume = volume_old + volume_diff;
+                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    print ("Novo Volume %d\n", application.volume);
+                }
+            });
+
+            box.add (label);
+            box.add (volume);
+        }
     }
 }

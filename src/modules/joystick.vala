@@ -228,12 +228,15 @@ public class Joystick {
                 this.window.get_window ().child_focus (Gtk.DirectionType.UP);
             }
 
-            if (button_name == "ARROW_LEFT" && this.window.visible ()) {
-                this.window.get_window ().child_focus (Gtk.DirectionType.LEFT);
-            }
+            if (!(current_widget is Gtk.Scale)) {
 
-            if (button_name == "ARROW_RIGHT" && this.window.visible ()) {
-                this.window.get_window ().child_focus (Gtk.DirectionType.RIGHT);
+                if (button_name == "ARROW_LEFT" && this.window.visible ()) {
+                    this.window.get_window ().child_focus (Gtk.DirectionType.LEFT);
+                }
+
+                if (button_name == "ARROW_RIGHT" && this.window.visible ()) {
+                    this.window.get_window ().child_focus (Gtk.DirectionType.RIGHT);
+                }
             }
 
 

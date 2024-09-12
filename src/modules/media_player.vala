@@ -11,6 +11,7 @@ interface Player : Object {
     public abstract bool can_play { get; }
     public abstract bool can_go_next { get; }
     public abstract string playback_status { owned get; }
+    public abstract HashTable<string, Variant> metadata  { owned get; }
 
     public abstract void previous () throws GLib.Error;
     public abstract void next () throws GLib.Error;
@@ -84,5 +85,17 @@ public class MediaPlayer : Object {
         if (this.player.can_go_next) {
             this.player.next ();
         }
+    }
+
+    public string ? get_media_prop (string key) {
+        string value = null;
+
+        this.player.metadata.foreach ((k, v) => {
+            if (key == k) {
+                value = v.get_string ();
+            }
+        });
+
+        return value;
     }
 }

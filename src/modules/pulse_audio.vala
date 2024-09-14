@@ -64,11 +64,18 @@ public class Pulse : GLib.Object {
         this.exec ((c) => {
             c.get_sink_input_info_list ((c, sink, eol) => {
                 if (eol == 0) {
-                    // PulseAudio.CVolume volume = sink.volume;
-                    // string app = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_NAME);
-                    // string title = sink.name;
+                    string name;
+                    name = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_NAME);
+                    if (name == null) {
+                        name = sink.proplist.gets ("node.name");
+                    }
+                    if (name == null) {
+                        name = "Aplicação Desconhecida";
+                    }
+
+
                     Application application = Application ();
-                    application.name = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_NAME);
+                    application.name = name;
                     application.title = sink.name;
                     application.id = sink.index;
                     application.cvolume = sink.volume;

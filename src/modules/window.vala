@@ -7,7 +7,6 @@ public class MainWindow : Gtk.Application {
 
     protected override void activate () {
         this.loop = new GLib.MainLoop ();
-        // this.joystick = new Joystick ();
         this.pulse = new Pulse ();
         Gtk.ApplicationWindow window = new Gtk.ApplicationWindow (this);
         this.joystick = new Joystick (this);
@@ -116,7 +115,6 @@ public class MainWindow : Gtk.Application {
 
         // update clock
         var timeout = new GLib.TimeoutSource (1000);
-        var pulse_timeout = new GLib.TimeoutSource (10000);
         timeout.set_callback (() => {
             now = new GLib.DateTime.now ().format ("%H:%M:%S");
             clock.label = now;
@@ -127,16 +125,12 @@ public class MainWindow : Gtk.Application {
 
             media_control_label.set_label (player_title);
             media_control_image.set_from_file (player_image);
-
-            return true;
-        });
-
-        pulse_timeout.set_callback (() => {
             this.render_pulse (box2);
+
             return true;
         });
+
         timeout.attach (this.loop.get_context ());
-        pulse_timeout.attach (this.loop.get_context ());
 
 
         // read joystick events
@@ -212,9 +206,15 @@ public class MainWindow : Gtk.Application {
         Gtk.Widget focus_child = box.get_focus_child ();
         int focus_id = 0;
         int counter = 0;
+
         if (clear_children) {
+
             box.foreach ((el) => {
+                if (focus_child.get_path ().to_string () == el.get_path ().to_string ()) {
+                    focus_id = counter;
+                }
                 box.remove (el);
+                counter++;
             });
         }
 
@@ -264,7 +264,15 @@ public class MainWindow : Gtk.Application {
         }
 
         if (clear_children) {
+            counter = 0;
+
             box.show_all ();
+            box.foreach ((el) => {
+                if (focus_id == counter) {
+                    el.grab_focus ();
+                }
+                counter++;
+            });
         }
     }
 }

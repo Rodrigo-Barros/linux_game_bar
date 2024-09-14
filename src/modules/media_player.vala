@@ -55,64 +55,92 @@ public class MediaPlayer : Object {
         return player;
     }
 
-    public void prev (Gtk.Button btn) {
-        if (this.player.can_go_previous) {
-            this.player.previous ();
-        }
-    }
-
     public string get_play_image (bool reverse = false) {
         string btn_image = "";
-        if (reverse == false) {
-            btn_image = this.player.playback_status == "Paused" ? "media-playback-start-symbolic" : "media-playback-pause-symbolic";
-        } else {
-            btn_image = this.player.playback_status == "Paused" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic";
+        if (this.player != null) {
+            if (reverse == false) {
+                btn_image = this.player.playback_status == "Paused" ? "media-playback-start-symbolic" : "media-playback-pause-symbolic";
+            } else {
+                btn_image = this.player.playback_status == "Paused" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic";
+            }
         }
         return btn_image;
     }
 
+    public void prev (Gtk.Button btn) {
+        if (this.player != null) {
+            try {
+                if (this.player.can_go_previous) {
+                    this.player.previous ();
+                }
+            } catch (GLib.Error e) {
+                print ("Error: %s\n", e.message);
+            }
+        }
+    }
+
     public void play_pause (Gtk.Button btn) {
-        if (this.player.can_play) {
-            Gtk.Image image = new Gtk.Image ();
-            this.player.play_pause ();
-            string btn_image = this.get_play_image (true);
-            btn.set_image (image);
-            image.set_from_icon_name (btn_image, Gtk.IconSize.BUTTON);
+        if (this.player != null) {
+            try {
+                if (this.player.can_play) {
+                    Gtk.Image image = new Gtk.Image ();
+                    this.player.play_pause ();
+                    string btn_image = this.get_play_image (true);
+                    btn.set_image (image);
+                    image.set_from_icon_name (btn_image, Gtk.IconSize.BUTTON);
+                }
+            } catch (GLib.Error e) {
+                print ("Error: %s", e.message);
+            }
+        }
+    }
+
+    public void next (Gtk.Button btn) {
+        if (this.player != null) {
+            try {
+                if (this.player.can_go_next) {
+                    this.player.next ();
+                }
+            } catch (GLib.Error e) {
+                print ("Error: %s", e.message);
+            }
         }
     }
 
     public string get_title (uint title_limit = 50) {
-        string title;
+        string title = "";
         uint title_size;
-        title = this.get_media_prop ("xesam:title");
-        title = title != null ? title : null;
-        title_size = title.length;
+        if (this.player != null) {
+            title = this.get_media_prop ("xesam:title");
+            title = title != null ? title : null;
+            title_size = title.length;
 
-        if (title != null) {
-            title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
+            if (title != null) {
+                title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
+            }
         }
 
         return title;
     }
 
     public string get_image () {
-        return this.get_media_prop ("mpris:artUrl").replace ("file://", "");
-    }
-
-    public void next (Gtk.Button btn) {
-        if (this.player.can_go_next) {
-            this.player.next ();
+        string image = "";
+        if (this.player != null) {
+            image = this.get_media_prop ("mpris:artUrl").replace ("file://", "");
         }
+        return image;
     }
 
-    public string ? get_media_prop (string key) {
-        string value = null;
+    public string get_media_prop (string key) {
+        string value = "";
 
-        this.player.metadata.foreach ((k, v) => {
-            if (key == k) {
-                value = v.get_string ();
-            }
-        });
+        if (this.player != null) {
+            this.player.metadata.foreach ((k, v) => {
+                if (key == k) {
+                    value = v.get_string ();
+                }
+            });
+        }
 
         return value;
     }

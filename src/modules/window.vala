@@ -4,6 +4,7 @@ public class MainWindow : Gtk.Application {
     private MediaPlayer media_player;
     private MainLoop loop;
     private Gtk.ApplicationWindow window;
+    private Settings settings;
 
     protected override void activate () {
         this.loop = new GLib.MainLoop ();
@@ -12,7 +13,7 @@ public class MainWindow : Gtk.Application {
         this.joystick = new Joystick (this);
         this.media_player = new MediaPlayer ();
         this.setup_window (window);
-        Settings settings = new Settings ();
+        this.settings = new Settings ();
         window.show_all ();
 
         this.window = window;
@@ -58,6 +59,7 @@ public class MainWindow : Gtk.Application {
         Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
         Gtk.Box pulse_audio = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
         Gtk.Box media_control = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Scale media_control_time = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 60, 1);
         Gtk.Box media_control_h = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 1);
         Gtk.Image media_control_image = new Gtk.Image ();
         Gtk.Label media_control_label = new Gtk.Label ("No Media");
@@ -68,6 +70,7 @@ public class MainWindow : Gtk.Application {
         media_prev.clicked.connect (this.media_player.prev);
         media_play_pause.clicked.connect (this.media_player.play_pause);
         media_next.clicked.connect (this.media_player.next);
+        media_control_time.format_value.connect (this.media_player.format_track);
 
         media_control_image.set_from_file (player_image);
         media_control_label.set_label (player_title);
@@ -99,6 +102,8 @@ public class MainWindow : Gtk.Application {
             }
         });
 
+        media_control_time.value_changed.connect (this.media_player.set_position);
+
         // Pulse audio applications
 
         Gtk.Expander expander = new Gtk.Expander ("Aplicações");
@@ -126,7 +131,7 @@ public class MainWindow : Gtk.Application {
             media_control_label.set_label (player_title);
             media_control_image.set_from_file (player_image);
             this.render_pulse (box2);
-
+            this.media_player.update_track_time (media_control_time);
             return true;
         });
 
@@ -134,6 +139,8 @@ public class MainWindow : Gtk.Application {
 
 
         // read joystick events
+        // int read_buttons_delay = int.parse (this.settings.getSetting ("modules.joystick.read_buttons_delay"));
+        // print ("read_button_delay:%d\n", read_buttons_delay);
         var timeout_joystick = new GLib.TimeoutSource (200);
         timeout_joystick.set_callback (() => {
             this.joystick.readEvents ();
@@ -156,6 +163,7 @@ public class MainWindow : Gtk.Application {
         media_control.get_style_context ().add_class ("media-control");
         media_control.add (media_control_label);
         media_control.add (media_control_image);
+        media_control.add (media_control_time);
 
         media_control_h.add (media_prev);
         media_control_h.add (media_play_pause);
@@ -210,9 +218,13 @@ public class MainWindow : Gtk.Application {
         if (clear_children) {
 
             box.foreach ((el) => {
-                if (focus_child.get_path ().to_string () == el.get_path ().to_string ()) {
-                    focus_id = counter;
+
+                if (focus_child is Gtk.Widget && el is Gtk.Widget) {
+                    if (focus_child.get_path ().to_string () == el.get_path ().to_string ()) {
+                        focus_id = counter;
+                    }
                 }
+
                 box.remove (el);
                 counter++;
             });

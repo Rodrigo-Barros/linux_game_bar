@@ -16,15 +16,27 @@ interface Player : Object {
     public abstract void previous () throws GLib.Error;
     public abstract void next () throws GLib.Error;
     public abstract void play_pause () throws GLib.Error;
+    public abstract void set_position (ObjectPath track_id, int64 position) throws GLib.Error;
+}
+
+[DBus (name = "org.freedesktop.DBus.Properties")]
+interface Properties : Object {
+    public signal void properties_changed (string path, HashTable<string, Variant> info, string[] v);
+
+    public abstract Variant get (string arg_1, string arg_2) throws GLib.Error;
+    public abstract HashTable<string, Variant> get_all (string arg_1) throws GLib.Error;
 }
 
 public class MediaPlayer : Object {
     Player player = null;
+    Properties player_props = null;
+    int64 position = 0;
 
     public MediaPlayer () {
         string player_name = this.getPlayer ();
         try {
             this.player = Bus.get_proxy_sync (BusType.SESSION, player_name, "/org/mpris/MediaPlayer2");
+            this.player_props = Bus.get_proxy_sync (BusType.SESSION, player_name, "/org/mpris/MediaPlayer2");
         } catch (GLib.Error e) {
             stdout.printf ("%s\n", e.message);
         }
@@ -108,10 +120,10 @@ public class MediaPlayer : Object {
     }
 
     public string get_title (uint title_limit = 50) {
-        string title = "";
+        string title = "No Media";
         uint title_size;
         if (this.player != null) {
-            title = this.get_media_prop ("xesam:title");
+            title = this.get_media_prop ("xesam:title").get_string ();
             title = title != null ? title : null;
             title_size = title.length;
 
@@ -126,22 +138,74 @@ public class MediaPlayer : Object {
     public string get_image () {
         string image = "";
         if (this.player != null) {
-            image = this.get_media_prop ("mpris:artUrl").replace ("file://", "");
+            image = this.get_media_prop ("mpris:artUrl").get_string ().replace ("file://", "");
         }
         return image;
     }
 
-    public string get_media_prop (string key) {
-        string value = "";
+    public GLib.Variant? get_media_prop (string key) {
+        GLib.Variant value = null;
 
         if (this.player != null) {
             this.player.metadata.foreach ((k, v) => {
                 if (key == k) {
-                    value = v.get_string ();
+                    if (v.get_type () == GLib.VariantType.INT64) {
+                        print ("key: %f\n", v.get_int64 ());
+                    }
+                    value = v;
                 }
             });
         }
 
         return value;
+    }
+
+    public void update_track_time (Gtk.Scale track_widget) {
+        if (track_widget != null && this.player != null) {
+            if (!track_widget.is_visible ()) {
+                track_widget.set_visible (true);
+            }
+            try {
+                Gtk.Adjustment adjustment = track_widget.get_adjustment ();
+                int64 position = this.player_props.get ("org.mpris.MediaPlayer2.Player", "Position").get_int64 ();
+                int64 seconds = position / 1000000;
+                uint32 track_duration = this.get_media_prop ("vlc:time").get_uint32 ();
+
+                adjustment.set_upper (track_duration);
+
+                adjustment.set_value (seconds);
+            } catch (GLib.Error e) {
+                track_widget.set_visible (false);
+            }
+        }
+    }
+
+    public string format_track (double value) {
+        int divisao = (int) (value / 60);
+        int minutos = divisao > 0 ? divisao : 0;
+        int segundos = minutos == 0 ? (int) value : ((int) value) % 60;
+
+        string formato = "";
+        formato += minutos < 10 ? "0" + minutos.to_string () : minutos.to_string ();
+        formato += ":";
+        formato += segundos < 10 ? "0" + segundos.to_string () : segundos.to_string ();
+        return formato;
+    }
+
+    public void set_position (Gtk.Range range) {
+        if (this.player != null) {
+            try {
+                int64 new_position = (int) range.get_value () * 1000000;
+                GLib.ObjectPath track_id = new GLib.ObjectPath (get_media_prop ("mpris:trackid").get_string ());
+                int64 diff = (new_position) - (this.position);
+                diff = diff < 0 ? diff * -1 : diff;
+                if (range.has_focus && (diff) > 1000000) {
+                    this.player.set_position (track_id, new_position);
+                }
+                this.position = new_position;
+            } catch (GLib.Error e) {
+                print ("%s\n", e.message);
+            }
+        }
     }
 }

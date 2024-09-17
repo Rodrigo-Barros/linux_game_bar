@@ -30,10 +30,10 @@ public class MainWindow : Gtk.Application {
 
         Gdk.Screen screen = Gdk.Screen.get_default ();
 
+        int pulse_audio_max_volume = (int) Settings.get ("modules.pulseaudio.max_volume").get_int ();
+
         window.title = "Linux Game Bar";
-        if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-            print ("CWD %s", GLib.Environment.get_variable ("PWD"));
-        }
+
         // window.window_position = Gtk.WindowPosition.CENTER;
         window.default_width = screen.get_width ();
         window.default_height = screen.get_height ();
@@ -56,7 +56,7 @@ public class MainWindow : Gtk.Application {
         // Left menu widgets
         Pulse.DefaultSink default_sink = this.pulse.get_default_sink ();
         Gtk.Label label = new Gtk.Label ("System " + default_sink.name);
-        Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
+        Gtk.Scale volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, pulse_audio_max_volume, 1);
         Gtk.Box pulse_audio = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
         Gtk.Box media_control = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
         Gtk.Scale media_control_time = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 60, 1);
@@ -81,7 +81,7 @@ public class MainWindow : Gtk.Application {
             int volume_current = (int) scale.get_value ();
             int volume_diff = volume_current - volume_old;
 
-            if (volume_current == 100 || volume_current == 0) {
+            if (volume_current == pulse_audio_max_volume || volume_current == 0) {
                 volume.error_bell ();
             }
 
@@ -109,19 +109,23 @@ public class MainWindow : Gtk.Application {
         Gtk.Expander expander = new Gtk.Expander ("Aplicações");
 
         Gtk.Box box2 = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
-        this.render_pulse (box2);
+        this.render_pulse (box2, pulse_audio_max_volume);
         expander.add (box2);
 
 
         // Rigth menu widgets
-        string now = new GLib.DateTime.now ().format ("%H:%M:%S");
+        string clock_format = Settings.get ("modules.clock.format").get_string ();
+        int clock_update_interval = (int) Settings.get ("modules.clock.update_interval").get_int ();
+        int joystick_read_buttons_interval = (int) Settings.get ("modules.joystick.read_buttons_interval").get_int ();
+
+        string now = new GLib.DateTime.now ().format (clock_format);
         Gtk.Label clock = new Gtk.Label (now);
         clock.get_style_context ().add_class ("clock");
 
         // update clock
-        var timeout = new GLib.TimeoutSource (1000);
+        var timeout = new GLib.TimeoutSource (clock_update_interval);
         timeout.set_callback (() => {
-            now = new GLib.DateTime.now ().format ("%H:%M:%S");
+            now = new GLib.DateTime.now ().format (clock_format);
             clock.label = now;
 
             player_title = this.media_player.get_title ();
@@ -130,18 +134,14 @@ public class MainWindow : Gtk.Application {
 
             media_control_label.set_label (player_title);
             media_control_image.set_from_file (player_image);
-            this.render_pulse (box2);
+            this.render_pulse (box2, pulse_audio_max_volume);
             this.media_player.update_track_time (media_control_time);
             return true;
         });
 
         timeout.attach (this.loop.get_context ());
 
-
-        // read joystick events
-        // int read_buttons_delay = int.parse (this.settings.getSetting ("modules.joystick.read_buttons_delay"));
-        // print ("read_button_delay:%d\n", read_buttons_delay);
-        var timeout_joystick = new GLib.TimeoutSource (200);
+        var timeout_joystick = new GLib.TimeoutSource (joystick_read_buttons_interval);
         timeout_joystick.set_callback (() => {
             this.joystick.readEvents ();
             return true;
@@ -207,7 +207,7 @@ public class MainWindow : Gtk.Application {
         return this.window;
     }
 
-    public void render_pulse (Gtk.Box box) {
+    public void render_pulse (Gtk.Box box, int max_volume) {
 
         GLib.List<weak Gtk.Widget> children = box.get_children ();
         bool clear_children = children.length () > 0;
@@ -239,7 +239,7 @@ public class MainWindow : Gtk.Application {
             title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
 
             label = new Gtk.Label (title);
-            volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 1);
+            volume = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, max_volume, 1);
 
             volume.set_value (application.volume);
             volume.value_changed.connect ((scale) => {
@@ -247,28 +247,16 @@ public class MainWindow : Gtk.Application {
                 int volume_current = int.parse (scale.get_value ().to_string ());
                 int volume_diff = volume_current - volume_old;
 
-                if (volume_current == 100 || volume_current == 0) {
+                if (volume_current == max_volume || volume_current == 0) {
                     volume.error_bell ();
                 }
 
-                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                    print ("volume_diff: %d\n", volume_diff);
-                }
                 if (volume_diff < 0) {
-                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                        print ("diminuindo volume %s \n", application.name);
-                    }
                     this.pulse.volume_down_application (application.id, volume_diff);
                 } else {
-                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                        print ("aumentando volume %s \n", application.name);
-                    }
                     this.pulse.volume_up_application (application.id, volume_diff);
                 }
-                application.volume = volume_old + volume_diff;
-                if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                    print ("Novo Volume %d\n", application.volume);
-                }
+                // application.volume = volume_old + volume_diff;
             });
 
             box.add (label);

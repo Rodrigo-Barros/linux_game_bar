@@ -1,5 +1,5 @@
 class Settings {
-    public string getSetting (string setting, string data = "") {
+    public static Json.Node get (string setting, string data = "") {
         Json.Parser parser = new Json.Parser ();
 
         if (data == "") {
@@ -10,18 +10,19 @@ class Settings {
 
         Json.Node node = parser.get_root ();
         Json.Object object = node.get_object ();
-        string value = "";
+        Json.Node value = null;
         var keys = setting.split (".");
         string key_first = keys[0];
 
         foreach (string key in object.get_members ()) {
             var item = object.get_member (key);
             if (key == key_first && keys.length == 1) {
-                value = Json.to_string (item, true);
+                value = item;
             } else if (key == key_first) {
                 switch (item.get_node_type ()) {
                 case Json.NodeType.VALUE:
-                    value = item.get_string ();
+                    print ("aqui\n");
+                    value = item;
                     break;
                 case Json.NodeType.OBJECT:
                     string new_data = Json.to_string (item, true);
@@ -36,10 +37,7 @@ class Settings {
                         }
                     }
 
-                    value = getSetting (new_setting, new_data);
-                    break;
-                default:
-                    value = "not_found";
+                    value = Settings.get (new_setting, new_data);
                     break;
                 }
             }

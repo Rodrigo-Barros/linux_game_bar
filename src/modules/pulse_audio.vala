@@ -3,6 +3,7 @@ public class Pulse : GLib.Object {
     protected PulseAudio.MainLoop mainloop;
     protected PulseAudio.Context context;
     protected PulseAudio.Context.Flags flags = PulseAudio.Context.Flags.NOFAIL;
+    protected double max_volume = Settings.get ("modules.pulseaudio.max_volume").get_double ();
 
     public struct Application {
         uint32 id;
@@ -82,9 +83,9 @@ public class Pulse : GLib.Object {
                     application.icon = sink.proplist.gets (PulseAudio.Proplist.PROP_APPLICATION_ICON_NAME);
                     application.volume = int.parse (sink.volume.avg ().sprint ().replace ("%", ""));
                     applications += application;
-                    if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                        stdout.printf ("App: %s,title: %s, volume:%s \n", application.name, application.title, application.cvolume.to_string ());
-                    }
+                    // if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
+                    // stdout.printf ("App: %s,title: %s, volume:%s \n", application.name, application.title, application.cvolume.to_string ());
+                    // }
                 }
                 if (eol == 1) {
                     c.disconnect ();
@@ -176,7 +177,7 @@ public class Pulse : GLib.Object {
         });
     }
 
-    public bool volume_down_application (uint32 id, int decrease) {
+    public bool volume_down_application (uint32 id, int32 decrease) {
         Application[] applications = this.get_applications ();
         for (int i = 0; i < applications.length; i++) {
             string application_name = applications[i].name;
@@ -184,23 +185,20 @@ public class Pulse : GLib.Object {
             PulseAudio.CVolume volume = applications[i].cvolume;
 
             uint32 volume_min = PulseAudio.Volume.MUTED;
+            double volume_max = PulseAudio.Volume.NORM;
             uint32 volume_anterior = volume.avg ();
-            float valor_diminuicao = (((float) PulseAudio.Volume.NORM * decrease)) / 100;
-            float percentual_aumento = (100 * valor_diminuicao) / (float) PulseAudio.Volume.NORM;
-            uint32 volume_atual = ((int) volume_anterior + (int) valor_diminuicao);
-
-            if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                print ("valor aumento: %f\n", valor_diminuicao);
-                print ("percentual diminuicao: %f\n", percentual_aumento);
-            }
-            if ((int) volume_atual <= volume_min) {
-                volume_atual = volume_min;
-            }
+            int32 volume_atual = (int32) (volume_anterior - ((volume_max * (decrease * -1)) / 100));
 
 
             if (application_id == id) {
+                if (volume_atual <= (int) volume_min) {
+                    volume_atual = (int32) volume_min;
+                }
+
                 if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
-                    stdout.printf ("Volume Anterior: %d, Volume Atual:%d\n", (int) volume_anterior, (int) volume_atual);
+                    stdout.printf ("Volume min: %f", volume_min);
+                    stdout.printf ("Volume Atual:%f\n", volume_atual);
+                    stdout.printf ("Volume Anterior: %f\n", volume_anterior);
                     stdout.printf ("Definindo o valor de %d para a aplicação %s\n", (int) volume_atual, application_name);
                 }
                 this.exec ((c) => {
@@ -227,7 +225,7 @@ public class Pulse : GLib.Object {
             int application_id = (int) applications[i].id;
             PulseAudio.CVolume volume = applications[i].cvolume;
 
-            uint32 volume_max = PulseAudio.Volume.NORM;
+            uint32 volume_max = (int) (PulseAudio.Volume.NORM * (this.max_volume / 100));
             uint32 volume_anterior = volume.avg ();
             float valor_aumento = (((float) PulseAudio.Volume.NORM * increase)) / 100;
             float percentual_aumento = (100 * valor_aumento) / (float) PulseAudio.Volume.NORM;
@@ -236,7 +234,7 @@ public class Pulse : GLib.Object {
 
             if (GLib.Environment.get_variable ("DEBUG_PULSE") != null) {
                 print ("valor aumento: %f\n", valor_aumento);
-                print ("percentual diminuicao: %f\n", percentual_aumento);
+                print ("percentual aumento: %f\n", percentual_aumento);
             }
 
             if ((int) volume_atual >= volume_max) {
@@ -261,8 +259,6 @@ public class Pulse : GLib.Object {
                 return true;
             }
         }
-
-        stdout.printf ("Não foi possível achar a aplicação com id %d\n", (int) id);
         return false;
     }
 }

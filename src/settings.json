@@ -1,13 +1,12 @@
 {
   "modules": {
     "pulseaudio": {
-      "max_volume": {
-        "description": "Volume máximo que o sistema poderá aumentar o volume das aplicações",
-        "value": 100
-      }
+      "max_volume": 150,
+      "increase": 10,
+      "decrease": 10
     },
     "joystick": {
-      "read_buttons_delay": 200,
+      "read_buttons_interval": 200,
       "keybindings": [
         {
           "delay": 500,
@@ -20,6 +19,10 @@
           "action": "ShellScript('~/local/bin/record_obs.sh')"
         }
       ]
+    },
+    "clock": {
+      "update_interval": 1000,
+      "format": "%H:%M:%S"
     }
   }
 }

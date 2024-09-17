@@ -242,13 +242,15 @@ public class Joystick {
 
             if (current_widget is Gtk.Scale) {
                 double value = current_widget.get_value ();
+                double increase = Settings.get ("modules.pulseaudio.increase").get_double ();
+                double decrease = Settings.get ("modules.pulseaudio.decrease").get_double ();
                 double new_value = value;
                 if (button_name == "ARROW_LEFT") {
-                    new_value = value - 10;
+                    new_value = value - increase;
                 }
 
                 if (button_name == "ARROW_RIGHT") {
-                    new_value = value + 10;
+                    new_value = value + decrease;
                 }
                 current_widget.set_value (new_value);
             }

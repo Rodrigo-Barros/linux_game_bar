@@ -10,13 +10,13 @@
       "keybindings": [
         {
           "delay": 500,
-          "keybing": ["L1", "R1"],
-          "action": "Window::Main"
+          "buttons": ["L1", "R1"],
+          "action": ["Window::Main", "aditional_args"]
         },
         {
           "delay": 1000,
-          "keybinding": ["L1 + Circle"],
-          "action": "ShellScript('~/local/bin/record_obs.sh')"
+          "buttons": ["L1", "R2"],
+          "action": ["ShellScript", "/local/bin/record_obs.sh"]
         }
       ]
     },

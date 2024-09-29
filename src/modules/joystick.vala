@@ -85,6 +85,11 @@ public class Joystick {
         string type;
     }
 
+    public struct ButtonsPressed {
+        double delay;
+        string[] buttons;
+    }
+
     public event[] events = new event[3];
 
     public SDL.Input.Joystick[] joysticks = {};
@@ -100,43 +105,29 @@ public class Joystick {
     };
 
     public bool addEvent (event button_event) {
-        uint32 current_event_id = -1;
+        uint slots_livres = this.events.length;
 
         for (int i = 0; i < this.events.length; i++) {
+            if (this.events[i].button_name != null) {
+                slots_livres--;
+            }
+
             if (this.events[i].button_name == null) {
-                current_event_id = i;
+                this.events[i] = button_event;
                 break;
             }
         }
 
-        if (current_event_id == -1) {
-            // print ("Todos os slots foram Ocupados\n");
-            current_event_id = 0;
-            for (int i = this.events.length; i > 1; i--) {
-                this.events[i - 1] = this.events[i - 2];
-            }
-        }
-
-        if (current_event_id != -1) {
-            this.events[current_event_id] = button_event;
-
-            event[] eventsOrdered = this.getEventsOrdered ();
-
-            // combination.split (" ");
-            for (int i = 0; i < eventsOrdered.length; i++) {
-                var item = eventsOrdered[i];
-                // print ("[%d] Button: %s Timestamp:%f\n", i, item.button_name, item.timestamp);
-            }
-            string pressed_buttons = "";
-            string combination = "L1 R1";
-
-            for (int i = combination.split (" ").length - 1; i >= 0; i-- ) {
-                if (eventsOrdered[i].timestamp > 0) {
-                    pressed_buttons += eventsOrdered[i].button_name + " ";
+        if (slots_livres == 0) {
+            uint last = this.events.length - 1;
+            for (int i = 0; i < this.events.length; i++) {
+                bool is_last = last == i;
+                if (!is_last) {
+                    this.events[i] = this.events[i + 1];
                 }
             }
 
-            pressed_buttons = pressed_buttons.strip ();
+            this.events[last] = button_event;
         }
 
         return true;
@@ -209,7 +200,7 @@ public class Joystick {
 
     public void wait_event (SDL.Event event) {
         string button_state = event.jbutton.state == 1 ? "pressed" : "release";
-        uint32 button_id = event.button.which > 255 ? event.button.which - 256 : event.button.which;
+        uint32 button_id = event.jbutton.button;
         Gtk.Widget current_widget = this.window.get_window ().get_focus ();
 
         if (event.type == SDL.EventType.JOYBUTTONDOWN) {
@@ -285,36 +276,53 @@ public class Joystick {
         event[] eventsOrdered = this.getEventsOrdered ();
         string pressed_buttons = "";
         event[] matchedEvents = new event[0];
-        string combination = "L1 R1";
+        ButtonsPressed buttonsPressed = this.getButtonsPressed (3);
         double maximum_delay = 1.00;
         bool aceptable_delay = false;
+        bool combination_found = false;
 
-        for (int i = combination.split (" ").length - 1; i >= 0; i-- ) {
-            if (eventsOrdered[i].timestamp > 0) {
-                matchedEvents += eventsOrdered[i];
-                pressed_buttons += eventsOrdered[i].button_name + " ";
-            }
-        }
 
-        if (matchedEvents.length > 0) {
-            double event_start = matchedEvents[0].timestamp;
-            double event_end = matchedEvents[matchedEvents.length - 1].timestamp;
-            double event_diff = event_end - event_start;
-            aceptable_delay = event_diff < maximum_delay;
+        print ("button_pressed: %s\n", string.joinv (" ", buttonsPressed.buttons));
 
-            if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
-                print ("Event diff %f\n", event_diff);
-                print ("Maximun delay %f\n", maximum_delay);
-                print ("Aceptable Delay %s\n", aceptable_delay.to_string ());
+        Json.Node keybindings = Settings.get ("modules.joystick.keybindings");
+
+        keybindings.get_array ().foreach_element ((array, index, element) => {
+            try {
+                Json.Parser parser = new Json.Parser ();
+                parser.load_from_data (Json.to_string (element, false));
+                Json.Node node = parser.get_root ();
+                Json.Object object = node.get_object ();
+
+                object.foreach_member ((object, key, node) => {
+
+                    if (combination_found)
+                        return;
+
+                    if (key == "buttons") {
+                        ButtonsPressed buttons_pressed = this.getButtonsPressed ((int) node.get_array ().get_length ());
+                        string[] combination = new string[0];
+                        Json.Array buttons = node.get_array ();
+                        buttons.foreach_element ((buttons, index, element) => {
+                            if (element.get_value_type () != GLib.Type.STRING) {
+                                print ("somente strings são aceitas para o campo modules.joysticks.keybindings.%s.buttons.%u", key, index);
+                            } else {
+                                combination += element.get_string ();
+                                combination_found = true;
+                            }
+                        });
+
+                        if (combination_found) {
+                            if (string.joinv (" ", combination) == string.joinv (" ", buttons_pressed.buttons)) {
+                                print ("Combinação de teclas encontrada\n");
+                                print ("Delay de acionamento %f\n", buttons_pressed.delay);
+                            }
+                        }
+                    }
+                });
+            } catch (GLib.Error e) {
+                print ("Error %s\n", e.message);
             }
-            pressed_buttons = pressed_buttons.strip ();
-            if (combination == pressed_buttons && aceptable_delay) {
-                this.window.toggle ();
-                if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
-                    print ("Match found\n");
-                }
-            }
-        }
+        });
     }
 
     public void readEvents () {
@@ -344,5 +352,44 @@ public class Joystick {
         }
 
         return ordered;
+    }
+
+    public ButtonsPressed getButtonsPressed (int size = 0) {
+        event[] eventsOrdered = this.getEventsOrdered ();
+        string[] buttons = new string[0];
+        string[] combination = new string[0];
+        double[] buttons_timestamp = new double[size];
+        ButtonsPressed buttonsPressed = this.ButtonsPressed ();
+
+        foreach (event event in eventsOrdered) {
+            if (event.button_name != null) {
+                buttons += event.button_name;
+            }
+        }
+
+        combination = buttons;
+
+        if (buttons.length > 1 && size > 0) {
+            combination = new string[0];
+            for (int i = size - 1; i >= 0; i--) {
+                event event = eventsOrdered[i];
+                if (event.button_name != null) {
+                    combination += event.button_name;
+                    buttons_timestamp += event.timestamp;
+                }
+            }
+        }
+
+        buttonsPressed.buttons = combination;
+        buttonsPressed.delay = eventsOrdered[0].timestamp - eventsOrdered[size - 1].timestamp;
+
+        // for (int i = 0; i < buttons_timestamp.length - 1; i++) {
+        // print ("%f: %f\n", i, buttons_timestamp[i]);
+        // }
+
+
+        // print ("%f - %f = %f\n", buttons_timestamp[buttons_timestamp.length - 1], buttons_timestamp[1], buttonsPressed.delay);
+
+        return buttonsPressed;
     }
 }

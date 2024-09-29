@@ -21,7 +21,6 @@ class Settings {
             } else if (key == key_first) {
                 switch (item.get_node_type ()) {
                 case Json.NodeType.VALUE:
-                    print ("aqui\n");
                     value = item;
                     break;
                 case Json.NodeType.OBJECT:
@@ -38,6 +37,9 @@ class Settings {
                     }
 
                     value = Settings.get (new_setting, new_data);
+                    break;
+                case Json.NodeType.ARRAY:
+                    value = item;
                     break;
                 }
             }

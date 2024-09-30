@@ -18,7 +18,8 @@ sources = [
     files('modules/pulse_audio.vala'),
     files('modules/window.vala'),
     files('modules/settings.vala'),
-    files('modules/media_player.vala')
+    files('modules/media_player.vala'),
+    files('modules/action.vala')
 ]
 
 executable('linux_game_bar', sources, dependencies: dependencies)

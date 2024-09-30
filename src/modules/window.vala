@@ -1,15 +1,17 @@
 public class MainWindow : Gtk.Application {
-    private Pulse pulse;
+    public Pulse pulse;
     private Joystick joystick;
     private MediaPlayer media_player;
     private MainLoop loop;
     private Gtk.ApplicationWindow window;
     private Settings settings;
+    public Action action;
 
     protected override void activate () {
         this.loop = new GLib.MainLoop ();
         this.pulse = new Pulse ();
         Gtk.ApplicationWindow window = new Gtk.ApplicationWindow (this);
+        this.action = new Action (this);
         this.joystick = new Joystick (this);
         this.media_player = new MediaPlayer ();
         this.setup_window (window);

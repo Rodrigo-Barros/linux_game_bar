@@ -98,12 +98,6 @@ public class Joystick {
 
     public GLib.Object modules;
 
-    public string[] commands = {
-        "MainWindow::toggle",
-        "Pulse::volume_up_sink",
-        "Pulse::volume_down_sink",
-    };
-
     public bool addEvent (event button_event) {
         uint slots_livres = this.events.length;
 
@@ -273,52 +267,43 @@ public class Joystick {
     }
 
     public void process_buttons () {
-        event[] eventsOrdered = this.getEventsOrdered ();
-        string pressed_buttons = "";
-        event[] matchedEvents = new event[0];
-        ButtonsPressed buttonsPressed = this.getButtonsPressed (3);
-        double maximum_delay = 1.00;
-        bool aceptable_delay = false;
+        ButtonsPressed buttons_pressed = this.getButtonsPressed (2);
         bool combination_found = false;
+        double delay = 0;
 
-
-        print ("button_pressed: %s\n", string.joinv (" ", buttonsPressed.buttons));
+        // print ("button_pressed: %s\n", string.joinv (" ", buttons_pressed.buttons));
 
         Json.Node keybindings = Settings.get ("modules.joystick.keybindings");
 
         keybindings.get_array ().foreach_element ((array, index, element) => {
             try {
-                Json.Parser parser = new Json.Parser ();
-                parser.load_from_data (Json.to_string (element, false));
-                Json.Node node = parser.get_root ();
-                Json.Object object = node.get_object ();
+                string[] combination = new string[0];
+                string[] action_arguments = new string[0];
 
-                object.foreach_member ((object, key, node) => {
+                string config = Json.to_string (element, false);
+                delay = Settings.get ("delay", config).get_int ();
+                Json.Array buttons = Settings.get ("buttons", config).get_array ();
+                Json.Array action = Settings.get ("action", config).get_array ();
 
-                    if (combination_found)
-                        return;
-
-                    if (key == "buttons") {
-                        ButtonsPressed buttons_pressed = this.getButtonsPressed ((int) node.get_array ().get_length ());
-                        string[] combination = new string[0];
-                        Json.Array buttons = node.get_array ();
-                        buttons.foreach_element ((buttons, index, element) => {
-                            if (element.get_value_type () != GLib.Type.STRING) {
-                                print ("somente strings são aceitas para o campo modules.joysticks.keybindings.%s.buttons.%u", key, index);
-                            } else {
-                                combination += element.get_string ();
-                                combination_found = true;
-                            }
-                        });
-
-                        if (combination_found) {
-                            if (string.joinv (" ", combination) == string.joinv (" ", buttons_pressed.buttons)) {
-                                print ("Combinação de teclas encontrada\n");
-                                print ("Delay de acionamento %f\n", buttons_pressed.delay);
-                            }
-                        }
-                    }
+                buttons.foreach_element ((buttons, index, element) => {
+                    combination += element.get_string ();
                 });
+                action.foreach_element ((buttons, index, element) => {
+                    action_arguments += element.get_string ();
+                });
+
+
+                bool acceptable_delay = buttons_pressed.delay < delay;
+                bool trigger_action = string.joinv (" ", combination) == string.joinv (" ", buttons_pressed.buttons) && acceptable_delay;
+                if (trigger_action) {
+                    print ("delay: %f\n", delay);
+                    print ("Combinação %s\n", string.joinv (" ", combination));
+                    print ("Action %s\n", string.joinv (" ", action_arguments));
+
+                    print ("Delay de acionamento %f\n", buttons_pressed.delay);
+                    print ("Combinação de teclas encontrada\n");
+                    this.exec_action (action_arguments);
+                }
             } catch (GLib.Error e) {
                 print ("Error %s\n", e.message);
             }
@@ -383,13 +368,17 @@ public class Joystick {
         buttonsPressed.buttons = combination;
         buttonsPressed.delay = eventsOrdered[0].timestamp - eventsOrdered[size - 1].timestamp;
 
-        // for (int i = 0; i < buttons_timestamp.length - 1; i++) {
-        // print ("%f: %f\n", i, buttons_timestamp[i]);
-        // }
-
-
-        // print ("%f - %f = %f\n", buttons_timestamp[buttons_timestamp.length - 1], buttons_timestamp[1], buttonsPressed.delay);
-
         return buttonsPressed;
+    }
+
+    public void exec_action (string[] action_arguments) {
+        string command = action_arguments[0];
+        string[] arguments = new string[0];
+        if (action_arguments.length > 1) {
+            for (int i = 1; i < action_arguments.length; i++) {
+                arguments += action_arguments[i];
+            }
+        }
+        this.window.action.execCommand (command, arguments);
     }
 }

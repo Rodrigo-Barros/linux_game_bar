@@ -11,13 +11,24 @@
         {
           "delay": 500,
           "buttons": ["L1", "R1"],
-          "action": ["Window::Main", "aditional_args"]
+          "action": ["Window::Toggle"]
         },
         {
           "delay": 1000,
-          "buttons": ["L1", "R2"],
-          "action": ["ShellScript", "/local/bin/record_obs.sh"]
-        }
+          "buttons": ["L1", "ARROW_UP"],
+          "action": ["Pulse::VolumeUp"]
+        },
+        {
+          "delay": 1000,
+          "buttons": ["L1", "ARROW_DOWN"],
+          "action": ["Pulse::VolumeDown"]
+        },
+        {
+          "delay": 1000,
+          "buttons": ["L1", "CROSS"],
+          "action": ["Pulse::ToggleMute"]
+        },
+        {}
       ]
     },
     "clock": {

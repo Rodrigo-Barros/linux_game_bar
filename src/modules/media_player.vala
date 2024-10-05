@@ -34,6 +34,12 @@ public class MediaPlayer : Object {
 
     public MediaPlayer () {
         string player_name = this.getPlayer ();
+        if (player_name != null) {
+            this.setupPlayer (player_name);
+        }
+    }
+
+    public void setupPlayer (string player_name) {
         try {
             this.player = Bus.get_proxy_sync (BusType.SESSION, player_name, "/org/mpris/MediaPlayer2");
             this.player_props = Bus.get_proxy_sync (BusType.SESSION, player_name, "/org/mpris/MediaPlayer2");
@@ -56,8 +62,8 @@ public class MediaPlayer : Object {
         return bus_names;
     }
 
-    public string getPlayer () {
-        string player = "";
+    public string ? getPlayer () {
+        string player = null;
         foreach (string name in this.getBusNames ()) {
             if ("org.mpris.MediaPlayer2" in name) {
                 player = name;
@@ -69,11 +75,15 @@ public class MediaPlayer : Object {
 
     public string get_play_image (bool reverse = false) {
         string btn_image = "";
+
         if (this.player != null) {
-            if (reverse == false) {
-                btn_image = this.player.playback_status == "Paused" ? "media-playback-start-symbolic" : "media-playback-pause-symbolic";
-            } else {
-                btn_image = this.player.playback_status == "Paused" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic";
+            switch (this.player.playback_status) {
+            case "Paused":
+                btn_image = "media-playback-start-symbolic";
+                break;
+            case "Playing":
+                btn_image = "media-playback-pause-symbolic";
+                break;
             }
         }
         return btn_image;
@@ -95,11 +105,7 @@ public class MediaPlayer : Object {
         if (this.player != null) {
             try {
                 if (this.player.can_play) {
-                    Gtk.Image image = new Gtk.Image ();
                     this.player.play_pause ();
-                    string btn_image = this.get_play_image (true);
-                    btn.set_image (image);
-                    image.set_from_icon_name (btn_image, Gtk.IconSize.BUTTON);
                 }
             } catch (GLib.Error e) {
                 print ("Error: %s", e.message);
@@ -121,12 +127,13 @@ public class MediaPlayer : Object {
 
     public string get_title (uint title_limit = 50) {
         string title = "No Media";
+        Variant title_prop;
         uint title_size;
         if (this.player != null) {
-            title = this.get_media_prop ("xesam:title").get_string ();
-            title = title != null ? title : null;
-            title_size = title.length;
+            title_prop = this.get_media_prop ("xesam:title");
+            title = title_prop != null? title_prop.get_string () : title;
 
+            title_size = title.length;
             if (title != null) {
                 title = title_size < title_limit ? title : title.substring (0, title_limit).concat ("...");
             }
@@ -137,8 +144,11 @@ public class MediaPlayer : Object {
 
     public string get_image () {
         string image = "";
+        Variant player_image = this.get_media_prop ("mpris:artUrl");
         if (this.player != null) {
-            image = this.get_media_prop ("mpris:artUrl").get_string ().replace ("file://", "");
+            if (player_image != null) {
+                image = player_image.get_string ().replace ("file://", "");
+            }
         }
         return image;
     }
@@ -146,15 +156,42 @@ public class MediaPlayer : Object {
     public GLib.Variant? get_media_prop (string key) {
         GLib.Variant value = null;
 
-        if (this.player != null) {
-            this.player.metadata.foreach ((k, v) => {
-                if (key == k) {
-                    if (v.get_type () == GLib.VariantType.INT64) {
-                        print ("key: %f\n", v.get_int64 ());
+        // if (this.player != null) {
+        // this.player.metadata.foreach ((k, v) => {
+        // if (key == k) {
+        // if (v.get_type () == GLib.VariantType.INT64) {
+        // print ("key: %f\n", v.get_int64 ());
+        // }
+        // value = v;
+        // }
+        // });
+        // }
+
+        if (value == null) {
+            try {
+                if (this.player_props != null) {
+
+                    Variant meta = this.player_props.get ("org.mpris.MediaPlayer2.Player", "Metadata");
+                    string type = meta.get_type_string ();
+                    if (type != null && meta.get_type_string () != null) {
+                        Variant val = null;
+                        string k = null;
+                        VariantIter iter = meta.iterator ();
+                        while (iter.next ("{sv}", out k, out val)) {
+                            if (k == key) {
+                                value = val;
+                                // print ("%s %s\n", key, val.get_string ());
+                                break;
+                            }
+                        }
+                    } else {
+                        print ("metadata is null\n");
                     }
-                    value = v;
                 }
-            });
+            } catch (GLib.Error e) {
+                // print ("%s\n", e.message);
+                //
+            }
         }
 
         return value;

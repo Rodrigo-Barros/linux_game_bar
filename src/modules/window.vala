@@ -129,10 +129,20 @@ public class MainWindow : Gtk.Application {
         timeout.set_callback (() => {
             now = new GLib.DateTime.now ().format (clock_format);
             clock.label = now;
+            string? player_bus_name = this.media_player.getPlayer ();
+            if (player_bus_name != null) {
+                this.media_player.setupPlayer (player_bus_name);
+                player_bus_name = this.media_player.getPlayer ();
+            }
 
             player_title = this.media_player.get_title ();
             player_image = this.media_player.get_image ();
             player_title = player_title == null ? "No Media" : player_title;
+
+            var img = new Gtk.Image ();
+            img.set_from_icon_name (this.media_player.get_play_image (), Gtk.IconSize.BUTTON);
+            media_play_pause.set_image (img);
+            // media_play_pause = new Gtk.Button.from_icon_name (this.media_player.get_play_image (), Gtk.IconSize.BUTTON);
 
             media_control_label.set_label (player_title);
             media_control_image.set_from_file (player_image);

@@ -33,6 +33,21 @@ public class Action {
             int decrease = (int) Settings.get ("modules.pulseaudio.decrease").get_int ();
             this.app.pulse.volume_down_sink (default_sink, decrease);
         });
+        this.addCommand ("ShellScript::exec", (args) => {
+            string script = args[0];
+            string[] script_args = new string[0];
+            for (int i = 1; i < args.length; i++) {
+                script_args += args[i];
+            }
+
+            try {
+                Subprocess process = new Subprocess.newv (args, SubprocessFlags.INHERIT_FDS);
+            } catch (GLib.Error e) {
+                print ("Erro ao executar o script [%s] %s %s\n", script, string.joinv (" ", script_args), e.message);
+            }
+            // Posix.fork ();
+            // Posix.execvp (script, script_args);
+        });
     }
 }
 

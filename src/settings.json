@@ -25,10 +25,9 @@
         },
         {
           "delay": 1000,
-          "buttons": ["L1", "CROSS"],
-          "action": ["Pulse::ToggleMute"]
-        },
-        {}
+          "buttons": ["L1", "SQUARE"],
+          "action": ["ShellScript::exec", "/tmp/bin/hello.sh"]
+        }
       ]
     },
     "clock": {

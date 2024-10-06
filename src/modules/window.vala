@@ -63,16 +63,20 @@ public class MainWindow : Gtk.Application {
         Gtk.Box media_control = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
         Gtk.Scale media_control_time = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 60, 1);
         Gtk.Box media_control_h = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 1);
+        Gtk.Box actions_menu = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 1);
         Gtk.Image media_control_image = new Gtk.Image ();
         Gtk.Label media_control_label = new Gtk.Label ("No Media");
         Gtk.Button media_prev = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.BUTTON);
         Gtk.Button media_play_pause = new Gtk.Button.from_icon_name (this.media_player.get_play_image (), Gtk.IconSize.BUTTON);
         Gtk.Button media_next = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.BUTTON);
+        Gtk.Button battery = new Gtk.Button.from_icon_name (this.joystick.get_battery_icon (), Gtk.IconSize.LARGE_TOOLBAR);
+        battery.get_style_context ().add_class ("battery");
 
         media_prev.clicked.connect (this.media_player.prev);
         media_play_pause.clicked.connect (this.media_player.play_pause);
         media_next.clicked.connect (this.media_player.next);
         media_control_time.format_value.connect (this.media_player.format_track);
+
 
         media_control_image.set_from_file (player_image);
         media_control_label.set_label (player_title);
@@ -124,6 +128,8 @@ public class MainWindow : Gtk.Application {
         Gtk.Label clock = new Gtk.Label (now);
         clock.get_style_context ().add_class ("clock");
 
+        this.media_player.update_track_time (media_control_time);
+
         // update clock
         var timeout = new GLib.TimeoutSource (clock_update_interval);
         timeout.set_callback (() => {
@@ -160,6 +166,10 @@ public class MainWindow : Gtk.Application {
         });
         timeout_joystick.attach (this.loop.get_context ());
 
+        // battery.set_halign (Gtk.Align.END);
+        actions_menu.pack_start (clock, true, true, 0);
+        actions_menu.add (battery);
+        // actions_menu.homogeneous = true;
 
         // Left Menu
         // left.add (label);
@@ -190,6 +200,7 @@ public class MainWindow : Gtk.Application {
 
         // Right Menu
         rigth.add (clock);
+        rigth.add (actions_menu);
 
         layout.add (left);
         layout.add (center);

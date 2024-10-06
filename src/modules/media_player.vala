@@ -10,7 +10,8 @@ interface Player : Object {
     public abstract bool can_go_previous { get; }
     public abstract bool can_play { get; }
     public abstract bool can_go_next { get; }
-    public abstract string playback_status { owned get; }
+    public abstract string playback_status { owned get; default = "Stopped"; }
+    public abstract bool can_seek { get; default = false; }
     public abstract HashTable<string, Variant> metadata  { owned get; }
 
     public abstract void previous () throws GLib.Error;
@@ -74,10 +75,13 @@ public class MediaPlayer : Object {
     }
 
     public string get_play_image (bool reverse = false) {
-        string btn_image = "";
+        string btn_image = "media-playback-stop-symbolic";
 
         if (this.player != null) {
             switch (this.player.playback_status) {
+            case "Stopped":
+                btn_image = "media-playback-stop-symbolic";
+                break;
             case "Paused":
                 btn_image = "media-playback-start-symbolic";
                 break;
@@ -90,39 +94,61 @@ public class MediaPlayer : Object {
     }
 
     public void prev (Gtk.Button btn) {
+        bool error = false;
         if (this.player != null) {
             try {
                 if (this.player.can_go_previous) {
                     this.player.previous ();
+                } else {
+                    error = true;
                 }
             } catch (GLib.Error e) {
                 print ("Error: %s\n", e.message);
             }
+        } else {
+            error = true;
         }
+        if (error)
+            btn.error_bell ();
     }
 
     public void play_pause (Gtk.Button btn) {
+        bool error = false;
         if (this.player != null) {
             try {
                 if (this.player.can_play) {
                     this.player.play_pause ();
+                } else {
+                    error = true;
                 }
             } catch (GLib.Error e) {
                 print ("Error: %s", e.message);
             }
+        } else {
+            error = true;
         }
+
+        if (error)
+            btn.error_bell ();
     }
 
     public void next (Gtk.Button btn) {
+        bool error = false;
         if (this.player != null) {
             try {
                 if (this.player.can_go_next) {
                     this.player.next ();
+                } else {
+                    error = true;
                 }
             } catch (GLib.Error e) {
                 print ("Error: %s", e.message);
             }
+        } else {
+            error = true;
         }
+        if (error)
+            btn.error_bell ();
     }
 
     public string get_title (uint title_limit = 50) {
@@ -143,7 +169,7 @@ public class MediaPlayer : Object {
     }
 
     public string get_image () {
-        string image = "";
+        string image = "/usr/share/icons/HighContrast/48x48/animations/process-idle.svg";
         Variant player_image = this.get_media_prop ("mpris:artUrl");
         if (this.player != null) {
             if (player_image != null) {
@@ -198,23 +224,31 @@ public class MediaPlayer : Object {
     }
 
     public void update_track_time (Gtk.Scale track_widget) {
+        bool hide_track_widget = false;
         if (track_widget != null && this.player != null) {
-            if (!track_widget.is_visible ()) {
-                track_widget.set_visible (true);
-            }
-            try {
-                Gtk.Adjustment adjustment = track_widget.get_adjustment ();
-                int64 position = this.player_props.get ("org.mpris.MediaPlayer2.Player", "Position").get_int64 ();
-                int64 seconds = position / 1000000;
-                uint32 track_duration = this.get_media_prop ("vlc:time").get_uint32 ();
+            if (this.player.can_seek) {
+                try {
+                    track_widget.show ();
+                    Gtk.Adjustment adjustment = track_widget.get_adjustment ();
+                    int64 position = this.player_props.get ("org.mpris.MediaPlayer2.Player", "Position").get_int64 ();
+                    int64 seconds = position / 1000000;
+                    uint32 track_duration = this.get_media_prop ("vlc:time").get_uint32 ();
 
-                adjustment.set_upper (track_duration);
+                    adjustment.set_upper (track_duration);
 
-                adjustment.set_value (seconds);
-            } catch (GLib.Error e) {
-                track_widget.set_visible (false);
+                    adjustment.set_value (seconds);
+                } catch (GLib.Error e) {
+                    print ("media error %s\n", e.message);
+                }
+            } else {
+                hide_track_widget = true;
             }
         }
+        if (this.player == null)
+            hide_track_widget = true;
+
+        if (hide_track_widget)
+            track_widget.hide ();
     }
 
     public string format_track (double value) {

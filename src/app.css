@@ -24,15 +24,29 @@ expander title {
 }
 
 .clock {
-    font-size: 72px;
+    font-size: 50px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
+    /* border-radius: 15px; */
+    border-top-left-radius: 15px;
+    border-bottom-left-radius: 15px;
+    border-right: unset;
     color: white;
 }
 
 .pulse {
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: 15px;
+    color: white;
+    padding: 10px;
+}
+
+.battery {
+    all: initial;
+    background-color: rgba(255, 255, 255, 0.2);
+    /* border-radius: 15px; */
+    border-left: unset;
+    border-top-right-radius: 15px;
+    border-bottom-right-radius: 15px;
     color: white;
     padding: 10px;
 }

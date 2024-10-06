@@ -131,6 +131,8 @@ public class Joystick {
         return this.events;
     }
 
+    SDL.Input.JoystickPowerLevel power_level;
+
     public MainWindow window;
 
     public Joystick (MainWindow window) {
@@ -145,6 +147,7 @@ public class Joystick {
                 string joystick_name = joystick.get_name ();
                 string power_level = this.translate_joystick_level (joystick.get_current_powerlevel ());
                 this.controller = Controller.init (joystick_name);
+                this.power_level = joystick.get_current_powerlevel ();
 
                 if (GLib.Environment.get_variable ("DEBUG_JOYSTICK") != null) {
                     print ("Joystick %s\n", joystick_name);
@@ -190,6 +193,36 @@ public class Joystick {
         }
 
         return power_level_status;
+    }
+
+    public string get_battery_icon () {
+        string battery_icon = "";
+        SDL.Input.Joystick joystick = new SDL.Input.Joystick (0);
+        SDL.Input.JoystickPowerLevel level = joystick.get_current_powerlevel ();
+
+        switch (level) {
+        case SDL.Input.JoystickPowerLevel.EMPTY:
+            battery_icon = "battery-level-0-charging-symbolic";
+            break;
+        case SDL.Input.JoystickPowerLevel.LOW:
+            battery_icon = "battery-level-10-charging-symbolic";
+            break;
+        case SDL.Input.JoystickPowerLevel.MEDIUM:
+            battery_icon = "battery-level-50-charging-symbolic";
+            break;
+        case SDL.Input.JoystickPowerLevel.FULL:
+        case SDL.Input.JoystickPowerLevel.MAX:
+            battery_icon = "battery-level-100-symbolic";
+            break;
+        case SDL.Input.JoystickPowerLevel.UNKNOWN:
+            battery_icon = "drive-harddisk-usb-symbolic";
+            break;
+        case SDL.Input.JoystickPowerLevel.WIRED:
+            battery_icon = "input-gaming-symbolic";
+            break;
+        }
+
+        return battery_icon;
     }
 
     public void wait_event (SDL.Event event) {
@@ -268,7 +301,6 @@ public class Joystick {
 
     public void process_buttons () {
         ButtonsPressed buttons_pressed = this.getButtonsPressed (2);
-        bool combination_found = false;
         double delay = 0;
 
         // print ("button_pressed: %s\n", string.joinv (" ", buttons_pressed.buttons));

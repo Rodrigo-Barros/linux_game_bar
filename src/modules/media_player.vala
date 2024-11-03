@@ -232,11 +232,14 @@ public class MediaPlayer : Object {
                     Gtk.Adjustment adjustment = track_widget.get_adjustment ();
                     int64 position = this.player_props.get ("org.mpris.MediaPlayer2.Player", "Position").get_int64 ();
                     int64 seconds = position / 1000000;
-                    uint32 track_duration = this.get_media_prop ("vlc:time").get_uint32 ();
+                    uint64 track_duration = this.get_media_prop ("mpris:length").get_int64 () / 1000000;
 
                     adjustment.set_upper (track_duration);
 
-                    adjustment.set_value (seconds);
+                    // fix a bug with firefox
+                    if (this.player.playback_status == "Playing") {
+                        adjustment.set_value (seconds);
+                    }
                 } catch (GLib.Error e) {
                     print ("media error %s\n", e.message);
                 }

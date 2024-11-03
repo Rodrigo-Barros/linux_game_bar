@@ -263,17 +263,17 @@ public class Joystick {
                 double increase = Settings.get ("modules.pulseaudio.increase").get_double ();
                 double decrease = Settings.get ("modules.pulseaudio.decrease").get_double ();
                 double new_value = value;
-                if (button_name == "ARROW_LEFT") {
+                if (button_name == "ARROW_LEFT" && this.window.visible ()) {
                     new_value = value - increase;
                 }
 
-                if (button_name == "ARROW_RIGHT") {
+                if (button_name == "ARROW_RIGHT" && this.window.visible ()) {
                     new_value = value + decrease;
                 }
                 current_widget.set_value (new_value);
             }
 
-            if (button_name == "CROSS") {
+            if (button_name == "CROSS" && this.window.visible ()) {
                 if (current_widget is Gtk.Button) {
                     current_widget.clicked ();
                 }
@@ -281,7 +281,7 @@ public class Joystick {
 
             if (current_widget is Gtk.Expander) {
                 bool expanded = current_widget.expanded;
-                if (button_name == "CROSS") {
+                if (button_name == "CROSS" && this.window.visible ()) {
                     expanded = !expanded;
                 }
 

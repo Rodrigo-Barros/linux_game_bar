@@ -314,6 +314,7 @@ public class Joystick {
 
                 string config = Json.to_string (element, false);
                 delay = Settings.get ("delay", config).get_int ();
+                delay = delay / 1000;
                 Json.Array buttons = Settings.get ("buttons", config).get_array ();
                 Json.Array action = Settings.get ("action", config).get_array ();
 
@@ -326,8 +327,9 @@ public class Joystick {
 
 
                 bool acceptable_delay = buttons_pressed.delay < delay;
-                bool trigger_action = string.joinv (" ", combination) == string.joinv (" ", buttons_pressed.buttons) && acceptable_delay;
-                if (trigger_action) {
+                bool trigger_action = string.joinv (" ", combination) == string.joinv (" ", buttons_pressed.buttons);
+
+                if (trigger_action && acceptable_delay) {
                     print ("delay: %f\n", delay);
                     print ("Combinação %s\n", string.joinv (" ", combination));
                     print ("Action %s\n", string.joinv (" ", action_arguments));
